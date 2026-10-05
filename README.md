@@ -17,4 +17,24 @@ SaaS platform that helps suppliers find, evaluate, prepare, and submit tender pr
 
 ## Status
 
-Planning phase. Pakistan-first launch, configurable for other countries.
+Scaffolding phase. Pakistan-first launch, configurable for other countries.
+
+## Tech stack
+
+- **Backend:** Python, FastAPI, SQLAlchemy, Alembic
+- **Frontend:** Next.js (TypeScript, Tailwind)
+- **Data:** PostgreSQL, Redis (job queue), MinIO/S3 (document storage)
+
+## Run locally
+
+Start infrastructure:
+
+    docker compose -f infra/docker-compose.yml up -d
+
+Start the API:
+
+    cd apps/api && source .venv/bin/activate && uvicorn app.main:app --reload
+
+Start the web app:
+
+    cd apps/web && npm run dev

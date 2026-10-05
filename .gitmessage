@@ -1,0 +1,8 @@
+# <type>(<scope>): <short summary, imperative, max 72 chars>
+#
+# Why this change was made (not what; the diff shows what):
+#
+# Refs: #<issue number>   (optional)
+#
+# Types: feat fix docs refactor test chore ci perf
+# Scopes: api web ingestion infra docs db auth compliance

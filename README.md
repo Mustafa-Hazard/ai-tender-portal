@@ -38,3 +38,7 @@ Start the API:
 Start the web app:
 
     cd apps/web && npm run dev
+
+## Contributing
+
+All changes go through branches and pull requests. See [docs/WORKFLOW.md](docs/WORKFLOW.md) and [CHANGELOG.md](CHANGELOG.md).

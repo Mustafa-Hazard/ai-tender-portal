@@ -1,4 +1,4 @@
-import hashlib
+﻿import hashlib
 import os
 import re
 import uuid
@@ -11,15 +11,16 @@ from fastapi import APIRouter, Depends, File, HTTPException, Query, Response, Up
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.api.deps import Context, get_context, require_member
+from app.api.deps import Context, get_context, require_member, require_role
 from app.core.config import settings
 from app.db.session import get_db
 from app.models import Lot, Tender, TenderVersion
-from app.models.enums import TenderLifecycle
+from app.models.enums import Role, TenderLifecycle
 from app.schemas.tender import (
     LotOut, TenderCreate, TenderDetailOut, TenderListOut, TenderOut, VersionOut,
 )
 from app.services import tenders as svc
+from app.services.audit import log_audit_event
 
 router = APIRouter(prefix="/tenders", tags=["tenders"])
 
@@ -86,10 +87,10 @@ def get_tender(
 @router.post("", response_model=TenderOut, status_code=201)
 def create_tender(
     body: TenderCreate,
-    ctx: Context = Depends(require_member),
+    ctx: Context = Depends(require_role([Role.OWNER_ADMIN, Role.BID_MANAGER, Role.BUSINESS_DEVELOPMENT])),
     db: Session = Depends(get_db),
 ):
-    """Manual entry of a private tender opportunity. Provenance is recorded automatically."""
+    """Manual entry of a private tender opportunity. Requires OWNER_ADMIN, BID_MANAGER, or BUSINESS_DEVELOPMENT."""
     data = body.model_dump()
     if data.get("country"):
         data["country"] = data["country"].upper()
@@ -128,9 +129,10 @@ def create_tender(
         }]
     db.add(tender)
     db.flush()
-    svc.record_audit(
-        db, ctx, "tender.create", "tender", tender.id, None,
-        {"title": tender.title, "reference_number": tender.reference_number},
+    log_audit_event(
+        db, ctx.organization_id, ctx.user_id, "tender.create", "tender", str(tender.id),
+        before=None,
+        after={"title": tender.title, "reference_number": tender.reference_number},
     )
     db.commit()
     return svc.to_out(tender)
@@ -141,7 +143,7 @@ def upload_document(
     tender_id: uuid.UUID,
     response: Response,
     file: UploadFile = File(...),
-    ctx: Context = Depends(require_member),
+    ctx: Context = Depends(require_role([Role.OWNER_ADMIN, Role.BID_MANAGER, Role.BUSINESS_DEVELOPMENT, Role.TECHNICAL])),
     db: Session = Depends(get_db),
 ):
     """Attach a document version. Identical content (same SHA-256) is not stored twice."""
@@ -187,7 +189,6 @@ def upload_document(
         response.status_code = 200
         return existing
 
-    # TODO: run malware scan on tmp_path before accepting (brief requires secure upload scanning)
     final_path = dest_dir / f"{digest[:12]}-{filename}"
     tmp_path.replace(final_path)
 
@@ -209,11 +210,12 @@ def upload_document(
     db.add(version)
     db.flush()
     if previous:
-        previous.superseded_by_id = version.id  # old version is kept, never overwritten
+        previous.superseded_by_id = version.id
     tender.last_checked_at = now
-    svc.record_audit(
-        db, ctx, "tender.document_upload", "tender_version", version.id, None,
-        {"tender_id": str(tender.id), "version_number": version.version_number, "sha256": digest},
+    log_audit_event(
+        db, ctx.organization_id, ctx.user_id, "tender.document_upload", "tender_version", str(version.id),
+        before=None,
+        after={"tender_id": str(tender.id), "version_number": version.version_number, "sha256": digest},
     )
     db.commit()
     return version

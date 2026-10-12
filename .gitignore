@@ -27,3 +27,8 @@ Thumbs.db
 # Uploaded documents (never commit tender or company files)
 storage/
 uploads/
+
+# Databases
+*.db
+*.sqlite
+*.sqlite3

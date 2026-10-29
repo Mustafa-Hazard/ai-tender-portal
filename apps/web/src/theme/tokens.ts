@@ -1,0 +1,267 @@
+// Design Tokens for AI Tender Portal
+// Extracted from Figma visual source of truth (design/figma/)
+
+export const tokens = {
+  "$schema": "https://json.schemastore.org/design-tokens.json",
+  "name": "AI Tender Portal Design Tokens",
+  "version": "1.0.0",
+  "description": "Design tokens extracted from high-fidelity Figma export (design/figma/)",
+  "color": {
+    "canvas": {
+      "value": "#f8f9ff",
+      "type": "color",
+      "description": "Global page canvas background"
+    },
+    "surface": {
+      "value": "#ffffff",
+      "type": "color",
+      "description": "Card, table, and modal background"
+    },
+    "surfaceSubtle": {
+      "value": "#f1f5f9",
+      "type": "color",
+      "description": "Table header and subtle container background"
+    },
+    "border": {
+      "value": "#e2e2e6",
+      "type": "color",
+      "description": "Standard border for cards, inputs, and dividers"
+    },
+    "borderStrong": {
+      "value": "#c6c6cd",
+      "type": "color",
+      "description": "Emphasized header and column boundary line"
+    },
+    "text": {
+      "primary": {
+        "value": "#0b1c30",
+        "type": "color",
+        "description": "Deep Navy primary text"
+      },
+      "secondary": {
+        "value": "#45464d",
+        "type": "color",
+        "description": "Muted body text and metadata"
+      },
+      "muted": {
+        "value": "#858d97",
+        "type": "color",
+        "description": "Subtle captions, timestamps, and placeholders"
+      },
+      "inverse": {
+        "value": "#ffffff",
+        "type": "color",
+        "description": "White text on dark/primary backgrounds"
+      }
+    },
+    "brand": {
+      "primary": {
+        "value": "#0051d5",
+        "type": "color",
+        "description": "Restrained enterprise blue primary action"
+      },
+      "primaryHover": {
+        "value": "#0041ab",
+        "type": "color",
+        "description": "Darker blue for hover states"
+      },
+      "primarySubtle": {
+        "value": "#eff6ff",
+        "type": "color",
+        "description": "Light blue tint for active sidebar items and chips"
+      },
+      "primaryBorder": {
+        "value": "#bfd3f4",
+        "type": "color",
+        "description": "Light blue border for active states"
+      }
+    },
+    "status": {
+      "success": {
+        "value": "#009668",
+        "type": "color",
+        "description": "Compliant, verified, eligible"
+      },
+      "successSubtle": {
+        "value": "#e6f7f0",
+        "type": "color",
+        "description": "Success badge background"
+      },
+      "warning": {
+        "value": "#d97706",
+        "type": "color",
+        "description": "Needs verification, expiring soon, partial"
+      },
+      "warningSubtle": {
+        "value": "#fef3c7",
+        "type": "color",
+        "description": "Warning badge background"
+      },
+      "danger": {
+        "value": "#ba1a1a",
+        "type": "color",
+        "description": "Critical blocker, expired, non-compliant"
+      },
+      "dangerSubtle": {
+        "value": "#fef2f2",
+        "type": "color",
+        "description": "Danger badge background"
+      },
+      "neutral": {
+        "value": "#64748b",
+        "type": "color",
+        "description": "Unknown, unreviewed, undetermined"
+      },
+      "neutralSubtle": {
+        "value": "#f1f5f9",
+        "type": "color",
+        "description": "Neutral badge background"
+      }
+    }
+  },
+  "layout": {
+    "sidebarWidth": {
+      "value": "256px",
+      "type": "dimension"
+    },
+    "headerHeight": {
+      "value": "64px",
+      "type": "dimension"
+    },
+    "cardPadding": {
+      "value": "20px",
+      "type": "dimension"
+    },
+    "gridGap": {
+      "value": "16px",
+      "type": "dimension"
+    },
+    "containerMaxWidth": {
+      "value": "1600px",
+      "type": "dimension"
+    }
+  },
+  "radii": {
+    "none": {
+      "value": "0px",
+      "type": "dimension"
+    },
+    "sm": {
+      "value": "4px",
+      "type": "dimension"
+    },
+    "md": {
+      "value": "6px",
+      "type": "dimension"
+    },
+    "lg": {
+      "value": "8px",
+      "type": "dimension"
+    },
+    "xl": {
+      "value": "12px",
+      "type": "dimension"
+    },
+    "full": {
+      "value": "9999px",
+      "type": "dimension"
+    }
+  },
+  "shadows": {
+    "none": {
+      "value": "none",
+      "type": "shadow"
+    },
+    "sm": {
+      "value": "0 1px 2px 0 rgba(11, 28, 48, 0.05)",
+      "type": "shadow"
+    },
+    "md": {
+      "value": "0 4px 6px -1px rgba(11, 28, 48, 0.08), 0 2px 4px -2px rgba(11, 28, 48, 0.04)",
+      "type": "shadow"
+    },
+    "lg": {
+      "value": "0 10px 15px -3px rgba(11, 28, 48, 0.1), 0 4px 6px -4px rgba(11, 28, 48, 0.05)",
+      "type": "shadow"
+    },
+    "xl": {
+      "value": "0 20px 25px -5px rgba(11, 28, 48, 0.12), 0 8px 10px -6px rgba(11, 28, 48, 0.06)",
+      "type": "shadow"
+    }
+  },
+  "typography": {
+    "fontFamily": {
+      "sans": {
+        "value": "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+        "type": "fontFamily"
+      },
+      "mono": {
+        "value": "'JetBrains Mono', Menlo, Monaco, Consolas, monospace",
+        "type": "fontFamily"
+      }
+    },
+    "fontSize": {
+      "xs": {
+        "value": "12px",
+        "lineHeight": "16px",
+        "type": "typography"
+      },
+      "sm": {
+        "value": "13px",
+        "lineHeight": "18px",
+        "type": "typography"
+      },
+      "base": {
+        "value": "14px",
+        "lineHeight": "20px",
+        "type": "typography"
+      },
+      "md": {
+        "value": "15px",
+        "lineHeight": "22px",
+        "type": "typography"
+      },
+      "lg": {
+        "value": "16px",
+        "lineHeight": "24px",
+        "type": "typography"
+      },
+      "xl": {
+        "value": "18px",
+        "lineHeight": "26px",
+        "type": "typography"
+      },
+      "2xl": {
+        "value": "22px",
+        "lineHeight": "28px",
+        "type": "typography"
+      },
+      "3xl": {
+        "value": "28px",
+        "lineHeight": "34px",
+        "type": "typography"
+      }
+    },
+    "fontWeight": {
+      "regular": {
+        "value": 400,
+        "type": "fontWeight"
+      },
+      "medium": {
+        "value": 500,
+        "type": "fontWeight"
+      },
+      "semibold": {
+        "value": 600,
+        "type": "fontWeight"
+      },
+      "bold": {
+        "value": 700,
+        "type": "fontWeight"
+      }
+    }
+  }
+} as const;
+
+export type DesignTokens = typeof tokens;
+export default tokens;

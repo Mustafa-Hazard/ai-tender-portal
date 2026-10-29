@@ -1,4 +1,7 @@
+import os
 import uuid
+
+os.environ.setdefault("DATABASE_URL", "sqlite+pysqlite:///./tender.db")
 
 import pytest
 from fastapi.testclient import TestClient

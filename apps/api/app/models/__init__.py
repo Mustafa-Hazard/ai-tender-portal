@@ -10,24 +10,8 @@ from app.models.source import Source
 from app.models.tender import Lot, Tender, TenderVersion
 
 __all__ = [
-    "ApprovalStepRecord",
-    "AuditEvent",
-    "Bid",
-    "BidLot",
-    "Evidence",
-    "Lot",
-    "Membership",
-    "Organization",
-    "OutcomeRecord",
-    "Proposal",
-    "ProposalSection",
-    "Requirement",
-    "RequirementAssessment",
-    "SavedSearch",
-    "Source",
-    "SubmissionRecord",
-    "Task",
-    "Tender",
-    "TenderVersion",
-    "User",
+    "ApprovalStepRecord", "SubmissionRecord", "AuditEvent", "Bid", "BidLot",
+    "Task", "Evidence", "Requirement", "RequirementAssessment", "Membership",
+    "Organization", "User", "OutcomeRecord", "Proposal", "ProposalSection",
+    "SavedSearch", "Source", "Lot", "Tender", "TenderVersion",
 ]

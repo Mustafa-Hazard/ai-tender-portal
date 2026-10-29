@@ -9,6 +9,7 @@ def test_health():
     response = client.get("/health")
     assert response.status_code == 200
     assert response.json()["status"] == "ok"
+    assert response.json()["service"] == "AI Tender Portal API"
 
 
 def test_openapi_schema_generation():
@@ -16,7 +17,6 @@ def test_openapi_schema_generation():
     assert schema["info"]["title"] == "AI Tender Portal API"
     assert len(schema["paths"]) >= 20
 
-    # Verify all core tags exist across registered endpoints
     all_tags = set()
     for path, methods in schema["paths"].items():
         for method, details in methods.items():

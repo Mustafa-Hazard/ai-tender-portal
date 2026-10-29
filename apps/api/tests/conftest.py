@@ -62,3 +62,17 @@ def member(make_member):
 @pytest.fixture()
 def other_member(make_member):
     return make_member("Org B")
+
+
+@pytest.fixture(scope="session", autouse=True)
+def ensure_db_seeded():
+    """Ensures test database contains seed scenarios so tests pass in clean environments/CI."""
+    from app.db.session import SessionLocal
+    from app.db.seed import seed_database
+    from app.models import Organization
+    db = SessionLocal()
+    try:
+        if db.query(Organization).count() == 0:
+            seed_database(db)
+    finally:
+        db.close()

@@ -28,6 +28,10 @@ Thumbs.db
 storage/
 uploads/
 
+#project_status_file
+handoff_v1
+
+
 # Databases
 *.db
 *.sqlite

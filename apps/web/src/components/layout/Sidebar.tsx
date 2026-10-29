@@ -39,6 +39,8 @@ export function Sidebar() {
     { title: "Participation", href: "/participation", icon: Layers, badge: "Kanban" },
     { title: "Compliance", href: "/compliance", icon: ShieldCheck },
     { title: "Proposals", href: "/proposals", icon: FileEdit },
+    { title: "Approvals", href: "/approvals", icon: ShieldCheck, badge: "Gate" },
+    { title: "Submissions", href: "/submissions", icon: FileEdit },
     { title: "Company Profile", href: "/profile", icon: Building2 },
     { title: "Document Vault", href: "/vault", icon: FolderLock },
     { title: "Calendar & Tasks", href: "/calendar", icon: Calendar },

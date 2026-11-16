@@ -16,6 +16,7 @@ import {
 import { StatusPill } from "../../components/shared/StatusPill";
 import { DocumentPreviewShell } from "../../components/shared/DocumentPreviewShell";
 import { useTenant } from "../../context/TenantContext";
+import { useToast } from "../../context/ToastContext";
 import { api } from "../../lib/api";
 
 interface VaultDoc {
@@ -37,6 +38,7 @@ interface VaultDoc {
 
 export default function DocumentVaultPage() {
   const { activeOrg } = useTenant();
+  const { success, warning, error: toastError } = useToast();
   const [documents, setDocuments] = useState<VaultDoc[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
@@ -158,8 +160,10 @@ export default function DocumentVaultPage() {
       setNewIssuer("");
       setNewExpiresOn("");
       setError(null);
+      success(`Evidence "${createdDoc.title}" stored securely in document vault.`);
     } catch (err: any) {
       setError(`Failed to save credential: ${err.message}`);
+      toastError(`Failed to save credential: ${err.message}`);
     }
   };
 
@@ -167,8 +171,10 @@ export default function DocumentVaultPage() {
     try {
       await api.deleteVaultEvidence(id, activeOrg.id);
       setDocuments((prev) => prev.filter((d) => d.id !== id));
+      warning("Document removed from company vault.");
     } catch (err: any) {
       setError(`Failed to delete document: ${err.message}`);
+      toastError(`Failed to delete document: ${err.message}`);
     }
   };
 

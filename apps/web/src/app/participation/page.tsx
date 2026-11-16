@@ -12,6 +12,7 @@ import {
   X,
 } from "lucide-react";
 import { useTenant } from "../../context/TenantContext";
+import { useToast } from "../../context/ToastContext";
 import { api } from "../../lib/api";
 
 interface BidItem {
@@ -41,6 +42,7 @@ const STAGES = [
 
 export default function BidParticipationPage() {
   const { activeOrg } = useTenant();
+  const { success, info } = useToast();
   const [bids, setBids] = useState<BidItem[]>([]);
   const [decisionModalBid, setDecisionModalBid] = useState<BidItem | null>(null);
   const [selectedDecision, setSelectedDecision] = useState<"bid" | "no_bid" | "hold">("bid");
@@ -122,6 +124,7 @@ export default function BidParticipationPage() {
           )
         );
         setDecisionModalBid(null);
+        success(`Decision recorded: ${selectedDecision.toUpperCase()} for ${decisionModalBid.tenderRef}`);
       } catch (err: any) {
         setDecisionError(`Failed to save decision: ${err.message}`);
       }
@@ -146,6 +149,7 @@ export default function BidParticipationPage() {
       try {
         await api.updateBidStage(bidId, activeOrg.id, nextStage);
         setBids(bids.map((b) => (b.id === bidId ? { ...b, stage: nextStage } : b)));
+        info(`Bid advanced to "${nextStage.replace(/_/g, " ").toUpperCase()}" stage.`);
       } catch {
         // network or server error handled gracefully
       }

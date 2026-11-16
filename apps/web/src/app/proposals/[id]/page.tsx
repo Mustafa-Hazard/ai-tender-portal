@@ -150,9 +150,10 @@ export default function ProposalDetailPage() {
 
   const handleAddItem = () => {
     if (isSubmitted) return;
+    const nextIdx = lineItems.length + 1;
     const newItem: PricingLineItem = {
-      id: `item-${Date.now()}`,
-      itemCode: `ACC-${Date.now().toString().slice(-3)}`,
+      id: `item-${nextIdx}`,
+      itemCode: `ACC-${String(nextIdx).padStart(3, "0")}`,
       description: "Consumables & Extended 3-Year Maintenance Kit",
       quantity: 1,
       unit: "Kit",

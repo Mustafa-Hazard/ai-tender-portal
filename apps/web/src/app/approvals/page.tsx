@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { StatusPill } from "../../components/shared/StatusPill";
 import { useTenant } from "../../context/TenantContext";
+import { useToast } from "../../context/ToastContext";
 import { api } from "../../lib/api";
 
 interface ApprovalTask {
@@ -31,6 +32,7 @@ interface ApprovalTask {
 
 export default function ApprovalsPage() {
   const { activeOrg, currentUser } = useTenant();
+  const { success, warning } = useToast();
   const [approvals, setApprovals] = useState<ApprovalTask[]>([]);
   const [activeTab, setActiveTab] = useState<string>("all");
   const [selectedTask, setSelectedTask] = useState<ApprovalTask | null>(null);
@@ -126,6 +128,15 @@ export default function ApprovalsPage() {
               : a
           )
         );
+        if (actionType === "approve") {
+          success(`Step "${selectedTask.stepName}" has been successfully approved.`, {
+            title: "Approval Recorded",
+          });
+        } else {
+          warning(`Feedback recorded for step "${selectedTask.stepName}".`, {
+            title: "Changes Requested",
+          });
+        }
         setSelectedTask(null);
         setActionType(null);
       } catch (err: any) {

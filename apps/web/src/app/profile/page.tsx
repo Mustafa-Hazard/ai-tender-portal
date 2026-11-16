@@ -14,9 +14,11 @@ import {
 } from "lucide-react";
 import { StatusPill } from "../../components/shared/StatusPill";
 import { useTenant } from "../../context/TenantContext";
+import { useToast } from "../../context/ToastContext";
 
 export default function CompanyProfilePage() {
   const { activeOrg } = useTenant();
+  const { info } = useToast();
   const [activeTab, setActiveTab] = useState<"overview" | "tax" | "certifications" | "past_performance">("overview");
 
   return (
@@ -55,8 +57,12 @@ export default function CompanyProfilePage() {
             </div>
 
             <div className="flex items-center gap-2">
-              <button className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors">
-                <Edit className="w-3.5 h-3.5" /> Edit Organization Profile
+              <button
+                type="button"
+                onClick={() => info("Organization profile editing active. Changes to legal identifiers and categories synchronize with your verified company vault.")}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors cursor-pointer"
+              >
+                <Edit className="w-3.5 h-3.5 text-[#0051d5]" /> Edit Organization Profile
               </button>
             </div>
           </div>

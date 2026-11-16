@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   TrendingUp,
   ShieldCheck,
@@ -16,12 +17,15 @@ import {
   Layers,
 } from "lucide-react";
 import { useTenant } from "../context/TenantContext";
+import { useToast } from "../context/ToastContext";
 import { TenderCard, TenderCardData } from "../components/shared/TenderCard";
 import { FilterChip } from "../components/shared/FilterChip";
 import { Timeline, TimelineMilestone } from "../components/shared/Timeline";
 import { api } from "../lib/api";
 
 export default function DashboardPage() {
+  const router = useRouter();
+  const { info } = useToast();
   const { activeOrg, currentRole, uiState, setUiState } = useTenant();
   const [selectedFilter, setSelectedFilter] = useState<string>("all");
 
@@ -409,8 +413,11 @@ export default function DashboardPage() {
                 <TenderCard
                   key={t.id}
                   tender={t}
-                  onSelect={(id) => alert(`Opening Tender ${id}`)}
-                  onEvaluate={(id) => alert(`Evaluating Bid Qualification for ${id}`)}
+                  onSelect={(id) => router.push(`/tenders/${id}`)}
+                  onEvaluate={(id) => {
+                    info(`Opening compliance & qualification matrix for ${t.title}...`);
+                    router.push(`/compliance?tender_id=${id}`);
+                  }}
                 />
               ))}
           </div>

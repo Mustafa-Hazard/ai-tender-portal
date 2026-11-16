@@ -17,6 +17,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { useTenant } from "../../context/TenantContext";
+import { useToast } from "../../context/ToastContext";
 import { TenderCard, TenderCardData } from "../../components/shared/TenderCard";
 import { StatusPill } from "../../components/shared/StatusPill";
 import { api } from "../../lib/api";
@@ -172,6 +173,13 @@ interface SavedSearchModalState {
 export default function DiscoverTendersPage() {
   const { activeOrg, currentUser, uiState } = useTenant();
   const router = useRouter();
+  const { info } = useToast();
+
+  const handleEvaluateTender = (tenderId: string) => {
+    const target = tendersList.find((t) => t.id === tenderId);
+    info(`Evaluating compliance & eligibility matrix for ${target?.title || "tender"}...`);
+    router.push(`/compliance?tender_id=${tenderId}`);
+  };
 
   // Dynamic API State
   const [tendersList, setTendersList] = useState(allTenders);
@@ -659,6 +667,7 @@ export default function DiscoverTendersPage() {
                 onSelect={(id) => {
                   router.push(`/tenders/${id}`);
                 }}
+                onEvaluate={handleEvaluateTender}
               />
               {/* "Why Recommended" AI Rationale Tooltip Banner */}
               <div className="mt-1.5 p-2 rounded-lg bg-blue-50/80 border border-blue-100 text-[11px] text-blue-900 flex items-start gap-1.5">
@@ -769,12 +778,21 @@ export default function DiscoverTendersPage() {
                       />
                     </td>
                     <td className="py-3 px-4 text-right whitespace-nowrap">
-                      <Link
-                        href={`/tenders/${tender.id}`}
-                        className="inline-flex items-center gap-1 px-3 py-1 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded text-xs font-semibold transition-colors"
-                      >
-                        Inspect <ArrowRight className="w-3 h-3" />
-                      </Link>
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleEvaluateTender(tender.id)}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 bg-[#0051d5] hover:bg-blue-700 text-white rounded text-xs font-semibold transition-colors cursor-pointer shadow-xs"
+                        >
+                          Evaluate
+                        </button>
+                        <Link
+                          href={`/tenders/${tender.id}`}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded text-xs font-semibold transition-colors"
+                        >
+                          Inspect <ArrowRight className="w-3 h-3" />
+                        </Link>
+                      </div>
                     </td>
                   </tr>
                 ))}

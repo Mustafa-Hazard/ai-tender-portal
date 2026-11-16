@@ -5,9 +5,30 @@
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
+let authToken: string | null = null;
+
+export function setAuthToken(token: string | null) {
+  authToken = token;
+  if (typeof window !== "undefined") {
+    if (token) {
+      localStorage.setItem("tender_portal_token", token);
+    } else {
+      localStorage.removeItem("tender_portal_token");
+    }
+  }
+}
+
+export function getAuthToken(): string | null {
+  if (authToken) return authToken;
+  if (typeof window !== "undefined") {
+    authToken = localStorage.getItem("tender_portal_token");
+  }
+  return authToken;
+}
+
 let globalAuthContext = {
-  orgId: "11111111-1111-1111-1111-111111111111",
-  userId: "11111111-0000-0000-0000-000000000002",
+  orgId: "",
+  userId: "",
 };
 
 export function setApiAuthContext(orgId: string, userId: string) {
@@ -29,6 +50,11 @@ async function request<T>(
     const defaultHeaders: Record<string, string> = isFormData
       ? {}
       : { "Content-Type": "application/json" };
+
+    const token = getAuthToken();
+    if (token) {
+      defaultHeaders["Authorization"] = `Bearer ${token}`;
+    }
 
     if (globalAuthContext.orgId) {
       defaultHeaders["X-Org-Id"] = globalAuthContext.orgId;
@@ -66,6 +92,19 @@ async function request<T>(
 }
 
 export const api = {
+  // Authentication & RBAC
+  signup: (payload: { email: string; password: string; full_name?: string; organization_name?: string; role?: string }) =>
+    request<any>("/api/v1/auth/signup", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  login: (payload: { email: string; password: string }) =>
+    request<any>("/api/v1/auth/login", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  getMe: (headers?: Record<string, string>) =>
+    request<any>("/api/v1/auth/me", { headers }),
   // Service Health
   health: () => request<{ status: string; service: string }>("/health"),
 

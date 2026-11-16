@@ -2,29 +2,21 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { setApiAuthContext } from "../lib/api";
+import { useAuth, Role } from "./AuthContext";
 
+export type { Role };
 export type UIState = "populated" | "empty" | "loading" | "error" | "permission_denied" | "stale";
-
-export type Role =
-  | "owner_admin"
-  | "bid_manager"
-  | "business_development"
-  | "technical_contributor"
-  | "finance_contributor"
-  | "compliance_reviewer"
-  | "approver"
-  | "viewer";
 
 export interface Organization {
   id: string;
   name: string;
   registrationCountry: string;
-  ntn: string;
-  secp: string;
+  ntn?: string;
+  secp?: string;
   categories: string[];
   regions: string[];
   profileCompleteness: number;
-  scenario: "A" | "B" | "C";
+  scenario?: "A" | "B" | "C" | string;
 }
 
 export interface User {
@@ -44,42 +36,6 @@ export interface NotificationItem {
   link?: string;
 }
 
-export const SCENARIO_ORGANIZATIONS: Organization[] = [
-  {
-    id: "11111111-1111-1111-1111-111111111111",
-    name: "Apex Healthcare Technologies Ltd (Fictional)",
-    registrationCountry: "PK",
-    ntn: "1234567-8",
-    secp: "0098765",
-    categories: ["Medical Devices", "Hospital Equipment", "Biomedical Engineering"],
-    regions: ["Federal Capital", "Punjab", "Sindh"],
-    profileCompleteness: 92,
-    scenario: "A",
-  },
-  {
-    id: "22222222-2222-2222-2222-222222222222",
-    name: "Delta Engineering & Cloud Solutions (Fictional)",
-    registrationCountry: "PK",
-    ntn: "5432109-8",
-    secp: "0045678",
-    categories: ["Cloud Computing", "IT Systems Integration", "Datacenter Infrastructure"],
-    regions: ["Punjab", "Sindh"],
-    profileCompleteness: 60,
-    scenario: "B",
-  },
-  {
-    id: "33333333-3333-3333-3333-333333333333",
-    name: "Indus Heavy Logistics & Mobility (Fictional)",
-    registrationCountry: "PK",
-    ntn: "9876543-1",
-    secp: "0011223",
-    categories: ["Vehicles & Heavy Equipment", "Transport Services"],
-    regions: ["Federal Capital", "Punjab", "Balochistan"],
-    profileCompleteness: 85,
-    scenario: "C",
-  },
-];
-
 interface TenantContextType {
   activeOrg: Organization;
   setActiveOrg: (org: Organization) => void;
@@ -93,7 +49,7 @@ interface TenantContextType {
   searchQuery: string;
   setSearchQuery: (q: string) => void;
   uiState: UIState;
-  setUiState: (state: "populated" | "empty" | "loading" | "error" | "permission_denied" | "stale") => void;
+  setUiState: (state: UIState) => void;
   isPlatformAdmin: boolean;
   setIsPlatformAdmin: (isAdmin: boolean) => void;
 }
@@ -101,70 +57,54 @@ interface TenantContextType {
 const TenantContext = createContext<TenantContextType | undefined>(undefined);
 
 export function TenantProvider({ children }: { children: ReactNode }) {
-  const [activeOrg, setActiveOrg] = useState<Organization>(SCENARIO_ORGANIZATIONS[0]);
-  const [currentRole, setCurrentRole] = useState<Role>("bid_manager");
-  const [isPlatformAdmin, setIsPlatformAdmin] = useState(false);
+  const { user, hasRole: authHasRole } = useAuth();
   const [uiState, setUiState] = useState<UIState>("populated");
   const [searchQuery, setSearchQuery] = useState("");
+  const [overrideRole, setOverrideRole] = useState<Role | null>(null);
 
   const [notifications, setNotifications] = useState<NotificationItem[]>([
     {
       id: "notif-1",
-      title: "Mandatory Evidence Expired (Scenario B)",
-      message: "PRA Provincial Sales Tax Registration expired 35 days ago. Disqualification risk under Rule 36.",
-      type: "danger",
-      timestamp: "10 mins ago",
-      read: false,
-      link: "/compliance",
-    },
-    {
-      id: "notif-2",
-      title: "Tender Corrigendum Issued (Scenario C)",
-      message: "NDMA published Corrigendum 01 extending deadline to Oct 24 and expediting delivery to 45 days. Prior approvals invalidated.",
-      type: "warning",
-      timestamp: "1 hour ago",
+      title: "Workspace Initialized",
+      message: "Your organization workspace is active. Register bids, upload credentials, and explore live tenders.",
+      type: "success",
+      timestamp: "Just now",
       read: false,
       link: "/tenders",
     },
-    {
-      id: "notif-3",
-      title: "EPADS Feed Sync Successful",
-      message: "Federal E-Procurement feed synced 14 new tenders. 3 match your category profile.",
-      type: "success",
-      timestamp: "3 hours ago",
-      read: true,
-    },
   ]);
 
-  const ROLE_USER_MAP: Record<Role, { idSuffix: string; fullName: string }> = {
-    owner_admin: { idSuffix: "000000000001", fullName: "Mustafa Khan (Owner/Admin)" },
-    bid_manager: { idSuffix: "000000000002", fullName: "Fatima Ali (Bid Manager)" },
-    compliance_reviewer: { idSuffix: "000000000003", fullName: "Bilal Ahmed (Compliance Reviewer)" },
-    technical_contributor: { idSuffix: "000000000004", fullName: "Zainab Noor (Technical Contributor)" },
-    finance_contributor: { idSuffix: "000000000005", fullName: "Usman Tariq (Finance Contributor)" },
-    approver: { idSuffix: "000000000006", fullName: "Ayesha Siddiqui (Executive Approver)" },
-    business_development: { idSuffix: "000000000007", fullName: "Hamza Malik (BD Manager)" },
-    viewer: { idSuffix: "000000000008", fullName: "Sara Raza (Observer/Viewer)" },
+  const currentRole: Role = overrideRole || user?.role || "owner_admin";
+
+  const [overrideOrg, setOverrideOrg] = useState<Organization | null>(null);
+  const [platformAdminState, setPlatformAdminState] = useState<boolean>(false);
+
+  const activeOrg: Organization = overrideOrg || {
+    id: user?.organization_id || "00000000-0000-0000-0000-000000000000",
+    name: user?.organization_name || "My Organization",
+    registrationCountry: "PK",
+    categories: [],
+    regions: ["Federal Capital", "Punjab"],
+    profileCompleteness: 45,
+    scenario: "A",
   };
 
-  const orgPrefix = activeOrg.id.slice(0, 8);
-  const roleConfig = ROLE_USER_MAP[currentRole] || ROLE_USER_MAP.bid_manager;
-  const currentUserId = `${orgPrefix}-0000-0000-0000-${roleConfig.idSuffix}`;
-
   const currentUser: User = {
-    id: currentUserId,
-    email: `${currentRole}@${activeOrg.name.toLowerCase().includes("apex") ? "apex-health" : activeOrg.name.toLowerCase().includes("delta") ? "delta-eng" : "indus-logistics"}.example`,
-    fullName: roleConfig.fullName,
+    id: user?.id || "00000000-0000-0000-0000-000000000001",
+    email: user?.email || "user@organization.example",
+    fullName: user?.full_name || user?.email?.split("@")[0] || "User",
     role: currentRole,
   };
 
   useEffect(() => {
-    setApiAuthContext(activeOrg.id, currentUserId);
-  }, [activeOrg.id, currentUserId]);
+    if (user?.organization_id && user?.id) {
+      setApiAuthContext(user.organization_id, user.id);
+    }
+  }, [user]);
 
   const hasRole = (allowedRoles: Role[]): boolean => {
-    if (isPlatformAdmin) return true;
-    return allowedRoles.includes(currentRole);
+    if (user?.is_platform_admin) return true;
+    return authHasRole(allowedRoles);
   };
 
   const markNotificationRead = (id: string) => {
@@ -181,10 +121,10 @@ export function TenantProvider({ children }: { children: ReactNode }) {
     <TenantContext.Provider
       value={{
         activeOrg,
-        setActiveOrg,
+        setActiveOrg: (org: Organization) => setOverrideOrg(org),
         currentUser,
         currentRole,
-        setCurrentRole,
+        setCurrentRole: (r: Role) => setOverrideRole(r),
         hasRole,
         notifications,
         markNotificationRead,
@@ -193,8 +133,8 @@ export function TenantProvider({ children }: { children: ReactNode }) {
         setSearchQuery,
         uiState,
         setUiState,
-        isPlatformAdmin,
-        setIsPlatformAdmin,
+        isPlatformAdmin: platformAdminState || !!user?.is_platform_admin,
+        setIsPlatformAdmin: (isAdmin: boolean) => setPlatformAdminState(isAdmin),
       }}
     >
       {children}

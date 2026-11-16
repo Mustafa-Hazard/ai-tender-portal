@@ -17,20 +17,27 @@ import {
   Users,
   Settings,
   Server,
+  LogOut,
   ChevronRight,
+  ShieldAlert,
 } from "lucide-react";
-import { useTenant } from "../../context/TenantContext";
+import { useAuth, Role } from "../../context/AuthContext";
 
 interface NavItem {
   title: string;
   href: string;
   icon: React.ElementType;
   badge?: string;
+  allowedRoles?: Role[];
+  adminOnly?: boolean;
 }
 
 export function Sidebar() {
   const pathname = usePathname();
-  const { activeOrg } = useTenant();
+  const { user, logout, hasRole } = useAuth();
+
+  const isOwnerOrAdmin = user?.is_platform_admin || user?.role === "owner_admin";
+  const isApproverOrAdmin = isOwnerOrAdmin || user?.role === "approver";
 
   const navigation: NavItem[] = [
     { title: "Dashboard", href: "/", icon: LayoutDashboard },
@@ -39,14 +46,25 @@ export function Sidebar() {
     { title: "Participation", href: "/participation", icon: Layers, badge: "Kanban" },
     { title: "Compliance", href: "/compliance", icon: ShieldCheck },
     { title: "Proposals", href: "/proposals", icon: FileEdit },
-    { title: "Approvals", href: "/approvals", icon: ShieldCheck, badge: "Gate" },
+    // Approvals gated to Approvers and Owner/Admins
+    ...(isApproverOrAdmin
+      ? [{ title: "Approvals", href: "/approvals", icon: ShieldCheck, badge: "Gate" }]
+      : []),
     { title: "Submissions", href: "/submissions", icon: FileEdit },
     { title: "Company Profile", href: "/profile", icon: Building2 },
     { title: "Document Vault", href: "/vault", icon: FolderLock },
     { title: "Calendar & Tasks", href: "/calendar", icon: Calendar },
-    { title: "Reports", href: "/reports", icon: BarChart3 },
-    { title: "Team", href: "/team", icon: Users },
-    { title: "Settings", href: "/settings", icon: Settings },
+    // Reports & Analytics
+    ...(isOwnerOrAdmin || user?.role === "bid_manager" || user?.role === "finance_contributor"
+      ? [{ title: "Reports & BI", href: "/reports", icon: BarChart3 }]
+      : []),
+    // Admin only management
+    ...(isOwnerOrAdmin
+      ? [
+          { title: "Team & Access", href: "/admin", icon: Users },
+          { title: "Settings", href: "/settings", icon: Settings },
+        ]
+      : []),
   ];
 
   return (
@@ -54,7 +72,7 @@ export function Sidebar() {
       {/* Brand Header */}
       <div className="h-16 px-5 border-b border-slate-200 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2.5 group">
-          <div className="w-7 h-7 rounded-md bg-[#0051d5] text-white flex items-center justify-center font-bold text-xs">
+          <div className="w-7 h-7 rounded-md bg-[#0051d5] text-white flex items-center justify-center font-bold text-xs shadow-xs">
             TP
           </div>
           <div className="flex flex-col">
@@ -69,26 +87,22 @@ export function Sidebar() {
       {/* Organization Badge Card */}
       <div className="p-3 m-3 rounded-lg bg-slate-50 border border-slate-200/80 flex flex-col gap-1.5">
         <div className="flex items-center justify-between text-xs text-slate-900 font-medium">
-          <span className="truncate max-w-[170px]" title={activeOrg.name}>
-            {activeOrg.name.replace(" (Fictional)", "")}
+          <span className="truncate max-w-[170px]" title={user?.organization_name || "My Organization"}>
+            {user?.organization_name || "Enterprise Workspace"}
           </span>
           <span className="font-mono text-[10px] bg-slate-200 text-slate-700 px-1 py-0.5 rounded font-semibold">
             PK
           </span>
         </div>
         <div className="flex items-center justify-between text-[11px] text-slate-500">
-          <span>Profile Setup</span>
-          <span className="font-semibold text-slate-800">{activeOrg.profileCompleteness}%</span>
-        </div>
-        <div className="w-full bg-slate-200 h-1 rounded-full overflow-hidden">
-          <div
-            className="bg-[#0051d5] h-1 rounded-full transition-all"
-            style={{ width: `${activeOrg.profileCompleteness}%` }}
-          />
+          <span>Active Role</span>
+          <span className="font-semibold text-blue-700 capitalize">
+            {user?.role?.replace(/_/g, " ") || "Member"}
+          </span>
         </div>
       </div>
 
-      {/* Navigation List matching Figma */}
+      {/* Dynamic Navigation List with RBAC Filtering */}
       <nav className="flex-1 px-3 py-1 space-y-0.5 overflow-y-auto">
         {navigation.map((item) => {
           const isActive = pathname === item.href;
@@ -126,18 +140,45 @@ export function Sidebar() {
         })}
       </nav>
 
-      {/* Platform Admin Area Toggle */}
-      <div className="p-3 border-t border-slate-200 bg-slate-50/50">
-        <Link
-          href="/admin"
-          className="flex items-center justify-between p-2 rounded-md text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors"
-        >
-          <div className="flex items-center gap-2">
-            <Server className="w-4 h-4 text-slate-500" />
-            <span>Platform Admin</span>
+      {/* Platform Administrator Panel Link (Conditioned on is_platform_admin or owner_admin) */}
+      {isOwnerOrAdmin && (
+        <div className="p-3 border-t border-slate-200 bg-slate-50/50">
+          <Link
+            href="/admin"
+            className="flex items-center justify-between p-2 rounded-md text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors"
+          >
+            <div className="flex items-center gap-2">
+              <Server className="w-4 h-4 text-blue-600" />
+              <span>Admin Dashboard</span>
+            </div>
+            <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+          </Link>
+        </div>
+      )}
+
+      {/* Authenticated User Profile & Sign Out Bar */}
+      <div className="p-3 border-t border-slate-200 bg-white flex items-center justify-between">
+        <div className="flex items-center gap-2 truncate">
+          <div className="w-7 h-7 rounded-full bg-slate-800 text-white flex items-center justify-center font-bold text-[11px] shrink-0">
+            {user?.full_name ? user.full_name.slice(0, 2).toUpperCase() : user?.email?.slice(0, 2).toUpperCase() || "TP"}
           </div>
-          <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
-        </Link>
+          <div className="flex flex-col truncate">
+            <span className="text-xs font-semibold text-slate-800 truncate" title={user?.full_name || user?.email}>
+              {user?.full_name || user?.email}
+            </span>
+            <span className="text-[10px] text-slate-400 truncate">
+              {user?.email}
+            </span>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={logout}
+          title="Sign out of Tender Portal"
+          className="p-1.5 rounded-md text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+        >
+          <LogOut className="w-4 h-4" />
+        </button>
       </div>
     </aside>
   );

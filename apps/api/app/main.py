@@ -1,7 +1,10 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.approvals import router as approvals_router
+from app.api.auth import router as auth_router
 from app.api.bids import router as bids_router
 from app.api.compliance import router as compliance_router
 from app.api.connectors import router as connectors_router
@@ -12,8 +15,18 @@ from app.api.saved_searches import router as saved_searches_router
 from app.api.tenders import router as tenders_router
 from app.api.vault import router as vault_router
 from app.core.config import settings
+from app.db.base import Base
+from app.db.session import engine
+import app.models  # ensure all models are registered with Base.metadata
 
-app = FastAPI(title=settings.app_name, version="0.1.0")
+
+# Create database schema on startup without preloading any mock data
+Base.metadata.create_all(bind=engine)
+
+app = FastAPI(
+    title=settings.app_name,
+    version="0.1.0",
+)
 
 # CORS middleware configuration allowing local frontend dev and preview servers
 app.add_middleware(
@@ -24,6 +37,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# API Routers
+app.include_router(auth_router, prefix="/api/v1")
 app.include_router(tenders_router, prefix="/api/v1")
 app.include_router(organizations_router, prefix="/api/v1")
 app.include_router(connectors_router, prefix="/api/v1")

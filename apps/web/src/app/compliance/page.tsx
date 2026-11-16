@@ -58,13 +58,9 @@ export default function ComplianceMatrixPage() {
   const { activeOrg, currentUser } = useTenant();
   const searchParams = useSearchParams();
   const urlTenderId = searchParams?.get("tender_id");
-  const [selectedTenderId, setSelectedTenderId] = useState(urlTenderId || TENDERS[0].id);
+  const [overrideTenderId, setOverrideTenderId] = useState<string | null>(null);
+  const selectedTenderId = overrideTenderId ?? (urlTenderId || TENDERS[0].id);
 
-  useEffect(() => {
-    if (urlTenderId) {
-      setSelectedTenderId(urlTenderId);
-    }
-  }, [urlTenderId]);
   const [requirements, setRequirements] = useState<RequirementItem[]>([]);
 
   useEffect(() => {
@@ -287,7 +283,7 @@ export default function ComplianceMatrixPage() {
               <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Active Tender</label>
               <select
                 value={selectedTenderId}
-                onChange={(e) => setSelectedTenderId(e.target.value)}
+                onChange={(e) => setOverrideTenderId(e.target.value)}
                 className="font-bold text-slate-900 bg-transparent border-0 p-0 text-base focus:ring-0 cursor-pointer"
               >
                 {TENDERS.map((t) => (

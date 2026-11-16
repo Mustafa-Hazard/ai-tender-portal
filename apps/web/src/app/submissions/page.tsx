@@ -104,7 +104,24 @@ export default function SubmissionsArchivePage() {
           </div>
         </div>
 
-        {submissions.map((sub) => (
+        {submissions.length === 0 ? (
+          <div className="p-12 text-center bg-white rounded-xl border border-slate-200 shadow-2xs">
+            <FileCheck className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+            <h3 className="text-sm font-bold text-slate-800">No Submissions Formally Sealed Yet</h3>
+            <p className="text-xs text-slate-500 max-w-md mx-auto mt-1 leading-relaxed">
+              When a proposal clears all internal governance gates and is confirmed for submission by an authorized user, its cryptographic SHA-256 seal and audit manifest are permanently archived here.
+            </p>
+            <div className="mt-5 flex items-center justify-center gap-3">
+              <Link
+                href="/proposals"
+                className="px-4 py-2 bg-[#0051d5] hover:bg-blue-700 text-white text-xs font-bold rounded-lg shadow-xs transition-colors"
+              >
+                Go to Proposals Workspace
+              </Link>
+            </div>
+          </div>
+        ) : (
+          submissions.map((sub) => (
           <div key={sub.id} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-6">
             <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 pb-4 border-b border-slate-100">
               <div>
@@ -173,7 +190,7 @@ export default function SubmissionsArchivePage() {
               </p>
             </div>
           </div>
-        ))}
+        )))}
       </div>
   );
 }

@@ -283,25 +283,33 @@ export default function BidParticipationPage() {
                         </div>
 
                         {/* Actions */}
-                        <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
-                          <button
-                            onClick={() => handleOpenDecisionModal(bid)}
-                            className="px-2 py-1 text-[11px] font-medium text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                          >
-                            Decision Matrix
-                          </button>
+                        <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-1.5 flex-wrap">
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => handleOpenDecisionModal(bid)}
+                              className="px-2 py-1 text-[11px] font-medium text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors cursor-pointer"
+                            >
+                              Decision
+                            </button>
+                            <Link
+                              href={`/compliance?tender_id=${bid.tenderId}`}
+                              className="px-2 py-1 text-[11px] font-medium text-emerald-700 hover:bg-emerald-50 rounded transition-colors"
+                            >
+                              Compliance
+                            </Link>
+                          </div>
 
                           {bid.stage === "preparing" ? (
                             <Link
                               href={`/proposals/${bid.id}`}
-                              className="px-2.5 py-1 text-[11px] font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded transition-colors flex items-center gap-1"
+                              className="px-2.5 py-1 text-[11px] font-semibold text-white bg-[#0051d5] hover:bg-blue-700 rounded transition-colors flex items-center gap-1"
                             >
-                              Open Proposal <ArrowRight className="w-3 h-3" />
+                              Proposal <ArrowRight className="w-3 h-3" />
                             </Link>
                           ) : (
                             <button
                               onClick={() => handleAdvanceStage(bid.id)}
-                              className="px-2 py-1 text-[11px] font-semibold text-blue-600 hover:bg-blue-50 rounded transition-colors flex items-center gap-1"
+                              className="px-2 py-1 text-[11px] font-semibold text-blue-600 hover:bg-blue-50 rounded transition-colors flex items-center gap-1 cursor-pointer"
                             >
                               Advance <ChevronRight className="w-3 h-3" />
                             </button>

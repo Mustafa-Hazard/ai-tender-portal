@@ -60,7 +60,6 @@ export function TenantProvider({ children }: { children: ReactNode }) {
   const { user, hasRole: authHasRole } = useAuth();
   const [uiState, setUiState] = useState<UIState>("populated");
   const [searchQuery, setSearchQuery] = useState("");
-  const [overrideRole, setOverrideRole] = useState<Role | null>(null);
 
   const [notifications, setNotifications] = useState<NotificationItem[]>([
     {
@@ -74,25 +73,23 @@ export function TenantProvider({ children }: { children: ReactNode }) {
     },
   ]);
 
-  const currentRole: Role = overrideRole || user?.role || "owner_admin";
+  // Strictly source role and admin state from global authentication JWT session
+  const currentRole: Role = user?.role || "owner_admin";
+  const isPlatformAdmin: boolean = Boolean(user?.is_platform_admin || user?.role === "owner_admin");
 
-  const [overrideOrg, setOverrideOrg] = useState<Organization | null>(null);
-  const [platformAdminState, setPlatformAdminState] = useState<boolean>(false);
-
-  const activeOrg: Organization = overrideOrg || {
+  const activeOrg: Organization = {
     id: user?.organization_id || "00000000-0000-0000-0000-000000000000",
-    name: user?.organization_name || "My Organization",
+    name: user?.organization_name || "Enterprise Workspace",
     registrationCountry: "PK",
-    categories: [],
-    regions: ["Federal Capital", "Punjab"],
-    profileCompleteness: 45,
-    scenario: "A",
+    categories: ["Healthcare", "Information Technology", "Engineering"],
+    regions: ["Federal Capital", "Punjab", "Sindh", "KPK"],
+    profileCompleteness: 85,
   };
 
   const currentUser: User = {
     id: user?.id || "00000000-0000-0000-0000-000000000001",
     email: user?.email || "user@organization.example",
-    fullName: user?.full_name || user?.email?.split("@")[0] || "User",
+    fullName: user?.full_name || user?.email?.split("@")[0] || "Authorized User",
     role: currentRole,
   };
 
@@ -121,10 +118,10 @@ export function TenantProvider({ children }: { children: ReactNode }) {
     <TenantContext.Provider
       value={{
         activeOrg,
-        setActiveOrg: (org: Organization) => setOverrideOrg(org),
+        setActiveOrg: () => {},
         currentUser,
         currentRole,
-        setCurrentRole: (r: Role) => setOverrideRole(r),
+        setCurrentRole: () => {},
         hasRole,
         notifications,
         markNotificationRead,
@@ -133,8 +130,8 @@ export function TenantProvider({ children }: { children: ReactNode }) {
         setSearchQuery,
         uiState,
         setUiState,
-        isPlatformAdmin: platformAdminState || !!user?.is_platform_admin,
-        setIsPlatformAdmin: (isAdmin: boolean) => setPlatformAdminState(isAdmin),
+        isPlatformAdmin,
+        setIsPlatformAdmin: () => {},
       }}
     >
       {children}

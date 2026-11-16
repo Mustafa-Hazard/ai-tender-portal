@@ -55,57 +55,95 @@ export default function ProposalsDirectoryPage() {
               </div>
             </div>
           </div>
+          <div className="flex items-center gap-2.5">
+            <Link
+              href="/compliance"
+              className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg transition-colors"
+            >
+              Compliance Matrix
+            </Link>
+            <Link
+              href="/tenders"
+              className="px-4 py-2 bg-[#0051d5] hover:bg-blue-700 text-white text-xs font-bold rounded-lg shadow-sm transition-colors"
+            >
+              Discover Tenders
+            </Link>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {proposals.map((p) => (
-            <div key={p.id} className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4 hover:shadow-md transition-shadow">
-              <div className="flex items-start justify-between gap-2">
-                <span className="font-mono text-xs font-bold text-slate-500">{p.tenderRef}</span>
-                <StatusPill
-                  label={p.readinessState.replace(/_/g, " ").toUpperCase()}
-                  variant={p.readinessState === "ready_to_submit" ? "success" : "warning"}
-                />
-              </div>
-
-              <div>
-                <h3 className="font-bold text-slate-900 text-sm">{p.title}</h3>
-                <p className="text-xs text-slate-500 mt-1 line-clamp-1">Tender: {p.tenderTitle}</p>
-              </div>
-
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between text-xs font-semibold text-slate-700">
-                  <span>Proposal Completion</span>
-                  <span>{p.progress}%</span>
-                </div>
-                <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
-                  <div className="bg-blue-600 h-2 rounded-full" style={{ width: `${p.progress}%` }}></div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2 p-3 bg-slate-50 rounded-lg text-xs">
-                <div>
-                  <span className="text-slate-400 block text-[10px] uppercase font-bold">Commercial Total</span>
-                  <span className="font-bold text-slate-900">{p.contractValue}</span>
-                </div>
-                <div>
-                  <span className="text-slate-400 block text-[10px] uppercase font-bold">Submission Target</span>
-                  <span className="font-bold text-slate-900">{p.deadline}</span>
-                </div>
-              </div>
-
-              <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
-                <span className="text-xs text-slate-500">Lead: {p.technicalLead}</span>
-                <Link
-                  href={`/proposals/${p.id}`}
-                  className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-colors"
-                >
-                  Open Editor & Pricing <ArrowRight className="w-3.5 h-3.5" />
-                </Link>
-              </div>
+        {proposals.length === 0 ? (
+          <div className="p-12 text-center bg-white rounded-xl border border-slate-200 shadow-2xs">
+            <FileEdit className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+            <h3 className="text-sm font-bold text-slate-800">No Proposals Currently in Preparation</h3>
+            <p className="text-xs text-slate-500 max-w-md mx-auto mt-1 leading-relaxed">
+              Begin drafting by selecting a tender from Discover Tenders or running a compliance matrix evaluation.
+            </p>
+            <div className="mt-5 flex items-center justify-center gap-3">
+              <Link
+                href="/tenders"
+                className="px-4 py-2 bg-[#0051d5] hover:bg-blue-700 text-white text-xs font-bold rounded-lg shadow-xs transition-colors"
+              >
+                Explore Live Tenders
+              </Link>
+              <Link
+                href="/proposals/bid-001"
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg transition-colors"
+              >
+                View Sample Proposal Dossier
+              </Link>
             </div>
-          ))}
-        </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {proposals.map((p) => (
+              <div key={p.id} className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4 hover:shadow-md transition-shadow">
+                <div className="flex items-start justify-between gap-2">
+                  <span className="font-mono text-xs font-bold text-slate-500">{p.tenderRef}</span>
+                  <StatusPill
+                    label={p.readinessState.replace(/_/g, " ").toUpperCase()}
+                    variant={p.readinessState === "ready_to_submit" ? "success" : "warning"}
+                  />
+                </div>
+
+                <div>
+                  <h3 className="font-bold text-slate-900 text-sm">{p.title}</h3>
+                  <p className="text-xs text-slate-500 mt-1 line-clamp-1">Tender: {p.tenderTitle}</p>
+                </div>
+
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between text-xs font-semibold text-slate-700">
+                    <span>Proposal Completion</span>
+                    <span>{p.progress}%</span>
+                  </div>
+                  <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                    <div className="bg-blue-600 h-2 rounded-full" style={{ width: `${p.progress}%` }}></div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 p-3 bg-slate-50 rounded-lg text-xs">
+                  <div>
+                    <span className="text-slate-400 block text-[10px] uppercase font-bold">Commercial Total</span>
+                    <span className="font-bold text-slate-900">{p.contractValue}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 block text-[10px] uppercase font-bold">Submission Target</span>
+                    <span className="font-bold text-slate-900">{p.deadline}</span>
+                  </div>
+                </div>
+
+                <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
+                  <span className="text-xs text-slate-500">Lead: {p.technicalLead}</span>
+                  <Link
+                    href={`/proposals/${p.id}`}
+                    className="inline-flex items-center gap-1 px-3 py-1.5 bg-[#0051d5] hover:bg-blue-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-colors"
+                  >
+                    Open Editor & Pricing <ArrowRight className="w-3.5 h-3.5" />
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
   );
 }

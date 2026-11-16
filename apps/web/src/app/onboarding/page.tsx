@@ -112,9 +112,9 @@ export default function OnboardingPage() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto py-6">
+    <div className="space-y-6 max-w-4xl mx-auto">
       {/* Top Header & Completeness Meter */}
-      <div className="bg-white border border-slate-200 rounded-lg p-6 shadow-2xs mb-6">
+      <div className="bg-white border border-slate-200 rounded-lg p-6 shadow-2xs">
         <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
           <div>
             <h1 className="text-xl font-extrabold text-[#0b1c30]">

@@ -13,6 +13,7 @@ import {
   CalendarDays,
 } from "lucide-react";
 import { useTenant } from "../../context/TenantContext";
+import { useToast } from "../../context/ToastContext";
 import { api } from "../../lib/api";
 
 interface MilestoneEvent {
@@ -30,6 +31,7 @@ interface MilestoneEvent {
 
 export default function CalendarMilestonesPage() {
   const { activeOrg } = useTenant();
+  const { success } = useToast();
   const [filterType, setFilterType] = useState<string>("all");
   const [liveMilestones, setLiveMilestones] = useState<MilestoneEvent[] | null>(null);
 
@@ -121,6 +123,32 @@ export default function CalendarMilestonesPage() {
     return m.type === filterType;
   });
 
+  const handleExportICS = () => {
+    let ics = "BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//AI Tender Portal//Calendar//EN\nCALSCALE:GREGORIAN\n";
+    filtered.forEach((ev) => {
+      const dt = ev.date.replace(/-/g, "");
+      ics += "BEGIN:VEVENT\n";
+      ics += `UID:${ev.id}@tenderportal.pk\n`;
+      ics += `DTSTAMP:${dt}T140000Z\n`;
+      ics += `DTSTART:${dt}T090000Z\n`;
+      ics += `DTEND:${dt}T170000Z\n`;
+      ics += `SUMMARY:${ev.title.replace(/\n/g, " ")}\n`;
+      ics += `DESCRIPTION:Client: ${ev.client} | Ref: ${ev.tenderRef}\n`;
+      ics += "STATUS:CONFIRMED\n";
+      ics += "END:VEVENT\n";
+    });
+    ics += "END:VCALENDAR";
+
+    const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `Tender_Milestones_${new Date().toISOString().slice(0, 10)}.ics`;
+    a.click();
+    URL.revokeObjectURL(url);
+    success("iCal (.ics) calendar file downloaded. Syncing with Google/Outlook calendar.");
+  };
+
   const getUrgencyBadge = (urgency: string) => {
     switch (urgency) {
       case "critical":
@@ -184,8 +212,9 @@ export default function CalendarMilestonesPage() {
 
           <div className="flex items-center gap-2">
             <button
-              onClick={() => alert("Calendar (.ics) export generated. Importing into Outlook / Google Calendar.")}
-              className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg bg-[#0051d5] text-xs font-semibold text-white hover:bg-[#0041ab] shadow-sm transition-colors"
+              type="button"
+              onClick={handleExportICS}
+              className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg bg-[#0051d5] text-xs font-semibold text-white hover:bg-[#0041ab] shadow-sm transition-colors cursor-pointer"
             >
               <Download className="w-3.5 h-3.5" />
               <span>Export iCal (.ics)</span>

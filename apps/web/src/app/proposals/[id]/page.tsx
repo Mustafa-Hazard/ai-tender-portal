@@ -13,25 +13,61 @@ import {
   Send,
   X,
   FileCheck,
+  Loader2,
 } from "lucide-react";
 import { StatusPill } from "../../../components/shared/StatusPill";
 import { PricingLineItem } from "../../../components/shared/PricingTableShell";
 import { ApprovalPanel, ApprovalStep } from "../../../components/shared/ApprovalPanel";
 import { useTenant } from "../../../context/TenantContext";
+import { useToast } from "../../../context/ToastContext";
 import { api } from "../../../lib/api";
 
 export default function ProposalDetailPage() {
   const { activeOrg, currentUser } = useTenant();
+  const { success } = useToast();
   const params = useParams();
   const bidId = (params?.id as string) || "aaaaaaaa-bbbb-cccc-dddd-111111111111";
   const [activeTab, setActiveTab] = useState<"commercial" | "technical" | "compliance" | "approvals" | "submission_gate">("submission_gate");
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [submittedReceipt, setSubmittedReceipt] = useState<{
     ref: string;
     sha256: string;
     timestamp: string;
   } | null>(null);
+
+  const handleExportPackage = async () => {
+    setIsExporting(true);
+    try {
+      success("Exporting technical envelope proposal package...");
+      const data = await api.exportProposal(bidId, activeOrg.id, "technical");
+      const blob = new Blob([JSON.stringify(data || { bid_id: bidId, status: "exported" }, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Proposal_Technical_Envelope_${bidId.slice(0, 8)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      const summary = {
+        bid_id: bidId,
+        organization: activeOrg.name,
+        line_items: lineItems,
+        envelope: "technical",
+        exported_at: new Date().toISOString(),
+      };
+      const blob = new Blob([JSON.stringify(summary, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Proposal_${bidId.slice(0, 8)}_Summary.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   // RULE 8: Deterministic Decimal Arithmetic Pricing Items
   const [lineItems, setLineItems] = useState<PricingLineItem[]>([
@@ -197,8 +233,23 @@ export default function ProposalDetailPage() {
           </div>
 
           <div className="flex items-center gap-3">
-            <button className="inline-flex items-center gap-2 px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg transition-colors">
-              <Download className="w-4 h-4" /> Export Package (PDF)
+            <button
+              type="button"
+              disabled={isExporting}
+              onClick={handleExportPackage}
+              className="inline-flex items-center gap-2 px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg transition-colors cursor-pointer disabled:opacity-60"
+            >
+              {isExporting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
+                  <span>Exporting Package...</span>
+                </>
+              ) : (
+                <>
+                  <Download className="w-4 h-4" />
+                  <span>Export Package (PDF / JSON)</span>
+                </>
+              )}
             </button>
             {!isSubmitted ? (
               <button

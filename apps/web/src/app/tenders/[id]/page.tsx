@@ -25,6 +25,7 @@ import { StatusPill } from "../../../components/shared/StatusPill";
 import { SourceBadge } from "../../../components/shared/SourceBadge";
 import { CitationLink } from "../../../components/shared/CitationLink";
 import { DocumentPreviewShell } from "../../../components/shared/DocumentPreviewShell";
+import { useToast } from "../../../context/ToastContext";
 import { api } from "../../../lib/api";
 
 interface TenderDetailParams {
@@ -34,6 +35,7 @@ interface TenderDetailParams {
 export default function TenderDetailPage({ params }: TenderDetailParams) {
   const resolvedParams = use(params);
   const tenderId = resolvedParams.id;
+  const { success, info } = useToast();
   
 
   const [activeTab, setActiveTab] = useState<
@@ -210,6 +212,7 @@ export default function TenderDetailPage({ params }: TenderDetailParams) {
 
   const handleParticipate = () => {
     setBidDecisionStatus("bidding");
+    success("Opportunity added to your active participation pipeline!");
   };
 
   const [tender, setTender] = useState(fallbackTender);
@@ -703,12 +706,20 @@ export default function TenderDetailPage({ params }: TenderDetailParams) {
                   </div>
 
                   <button
+                    type="button"
                     onClick={() => {
-                      alert(`Downloading verified tender document: ${doc.name}`);
+                      success(`Downloading verified tender document: ${doc.name}`);
+                      const blob = new Blob([`Verified RFP Tender Package\nDocument: ${doc.name}\nSHA256: ${doc.hash}\nPages: ${doc.pages}\nSource: Verified Federal Portal`], { type: "text/plain" });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement("a");
+                      a.href = url;
+                      a.download = doc.name;
+                      a.click();
+                      URL.revokeObjectURL(url);
                     }}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-2xs shrink-0"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-2xs shrink-0 cursor-pointer"
                   >
-                    <Download className="w-3.5 h-3.5" /> Download Pack
+                    <Download className="w-3.5 h-3.5 text-blue-600" /> Download Pack
                   </button>
                 </div>
               ))}

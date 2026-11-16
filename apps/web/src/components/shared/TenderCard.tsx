@@ -1,7 +1,8 @@
 "use client";
 
-import React from "react";
-import { Calendar, Building, AlertTriangle, ShieldAlert, ArrowRight, FileCheck } from "lucide-react";
+import React, { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Calendar, Building, AlertTriangle, ShieldAlert, ArrowRight, FileCheck, Loader2 } from "lucide-react";
 import { StatusPill } from "./StatusPill";
 import { SourceBadge } from "./SourceBadge";
 
@@ -48,6 +49,8 @@ export function TenderCard({
   onEvaluate,
   className = "",
 }: TenderCardProps) {
+  const router = useRouter();
+  const [isEvaluating, setIsEvaluating] = useState(false);
   if (isLoading) {
     return (
       <div className={`p-5 bg-white rounded-lg border border-slate-200 shadow-xs animate-pulse ${className}`}>
@@ -202,11 +205,29 @@ export function TenderCard({
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={() => onEvaluate && onEvaluate(tender.id)}
-              className="px-3 py-1.5 rounded-md text-xs font-semibold bg-[#0051d5] hover:bg-[#0041ab] text-white transition-colors cursor-pointer flex items-center gap-1 shadow-xs"
+              disabled={isEvaluating}
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsEvaluating(true);
+                if (onEvaluate) {
+                  onEvaluate(tender.id);
+                } else {
+                  router.push(`/compliance?tender_id=${tender.id}`);
+                }
+              }}
+              className="px-3 py-1.5 rounded-md text-xs font-semibold bg-[#0051d5] hover:bg-[#0041ab] disabled:opacity-70 text-white transition-colors cursor-pointer flex items-center gap-1 shadow-xs"
             >
-              <span>Evaluate</span>
-              <ArrowRight className="w-3.5 h-3.5" />
+              {isEvaluating ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <span>Evaluating...</span>
+                </>
+              ) : (
+                <>
+                  <span>Evaluate</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </>
+              )}
             </button>
           </div>
         </div>

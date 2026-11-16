@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   ShieldCheck,
   AlertTriangle,
@@ -55,7 +56,15 @@ const TENDERS = [
 
 export default function ComplianceMatrixPage() {
   const { activeOrg, currentUser } = useTenant();
-  const [selectedTenderId, setSelectedTenderId] = useState(TENDERS[0].id);
+  const searchParams = useSearchParams();
+  const urlTenderId = searchParams?.get("tender_id");
+  const [selectedTenderId, setSelectedTenderId] = useState(urlTenderId || TENDERS[0].id);
+
+  useEffect(() => {
+    if (urlTenderId) {
+      setSelectedTenderId(urlTenderId);
+    }
+  }, [urlTenderId]);
   const [requirements, setRequirements] = useState<RequirementItem[]>([]);
 
   useEffect(() => {

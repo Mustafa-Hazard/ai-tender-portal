@@ -27,3 +27,12 @@ Thumbs.db
 # Uploaded documents (never commit tender or company files)
 storage/
 uploads/
+
+#project_status_file
+handoff_v1
+
+
+# Databases
+*.db
+*.sqlite
+*.sqlite3

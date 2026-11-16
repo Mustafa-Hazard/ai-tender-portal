@@ -1,0 +1,56 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+language: "en-US"
+early_access: false
+
+reviews:
+  profile: "chill"
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  review_status: true
+  collapse_walkthrough: false
+  auto_review:
+    enabled: true
+    drafts: false
+    base_branches:
+      - "main"
+      - "develop"
+
+  path_filters:
+    - "!**/*.min.*"
+    - "!**/*.map"
+    - "!**/package-lock.json"
+    - "!design/figma/**"
+    - "!docs/**"
+    - "!**/*.db"
+
+  tools:
+    ast-grep:
+      enabled: true
+    eslint:
+      enabled: true
+    ruff:
+      enabled: true
+    shellcheck:
+      enabled: true
+
+  instructions: |
+    You are reviewing code for the AI Tender Portal (bidder-side enterprise SaaS).
+    Strictly enforce the architectural and trust rules documented in AGENTS.md:
+    1. Rule 1: Unknown values must render as "Not stated". Never invent default 0 or placeholder dates.
+    2. Rule 4 & 5: Ensure 4 distinct, unmerged indicators exist:
+       - Opportunity fit score (0-100)
+       - Verified mandatory eligibility (Eligible vs Disqualified)
+       - Proposal coverage (0-100%)
+       - Submission readiness (Blocked vs In Progress vs Ready)
+       A high fit score must NEVER mask an eligibility failure.
+    3. Rule 6: AI-generated text or extractions must be clearly labeled with confidence. Any "Not Applicable" (N/A) compliance decision requires a recorded justification.
+    4. Rule 7: Expired evidence in company vault MUST block mandatory eligibility.
+    5. Rule 8: Deterministic decimal arithmetic is required for all commercial and tax calculations. Floating point roundoff is prohibited.
+    6. Rule 9: Marking status as "Submitted" requires explicit human sign-off; never auto-submit on deadlines.
+    7. Rule 10: Technical proposals must be strictly stripped of commercial pricing before dual-pack export.
+    8. Rule 11: Tender addendums or corrigendums must automatically invalidate affected prior approvals.
+    9. Rule 13: All demo, seeded, and mock data must be visibly labeled as fictional.
+
+chat:
+  auto_reply: true

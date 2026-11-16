@@ -1,0 +1,11 @@
+{
+  "name": "ai-tender-portal",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AI Tender Portal — Bidder-Side SaaS Platform",
+  "scripts": {
+    "frontend": "npm run dev --prefix apps/web",
+    "backend": "cd apps/api && .venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload",
+    "dev": "npm run frontend"
+  }
+}

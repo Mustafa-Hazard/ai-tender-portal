@@ -1,3 +1,4 @@
+import uuid
 import pytest
 from fastapi.testclient import TestClient
 from app.main import app
@@ -6,20 +7,24 @@ client = TestClient(app)
 
 
 def test_auth_signup_login_and_rbac():
+    unique_suffix = uuid.uuid4().hex[:8]
+    test_email = f"test.owner.{unique_suffix}@acme-defense.pk"
+    password = "StrongPassword2026!"
+
     # 1. Sign up a new user and organization
     signup_data = {
-        "email": "test.owner@acme-defense.pk",
-        "password": "StrongPassword2026!",
+        "email": test_email,
+        "password": password,
         "full_name": "Hamza Tariq",
         "organization_name": "Acme Defense Systems",
         "role": "owner_admin",
     }
     res = client.post("/api/v1/auth/signup", json=signup_data)
-    assert res.status_code == 201
+    assert res.status_code == 201, f"Signup failed: {res.text}"
     payload = res.json()
     assert "access_token" in payload
     assert payload["token_type"] == "bearer"
-    assert payload["user"]["email"] == "test.owner@acme-defense.pk"
+    assert payload["user"]["email"] == test_email
     assert payload["user"]["role"] == "owner_admin"
     assert payload["user"]["organization_name"] == "Acme Defense Systems"
 
@@ -32,8 +37,8 @@ def test_auth_signup_login_and_rbac():
 
     # 3. Successful Login
     login_data = {
-        "email": "test.owner@acme-defense.pk",
-        "password": "StrongPassword2026!",
+        "email": test_email,
+        "password": password,
     }
     res_login = client.post("/api/v1/auth/login", json=login_data)
     assert res_login.status_code == 200
@@ -43,7 +48,7 @@ def test_auth_signup_login_and_rbac():
 
     # 4. Failed Login with wrong password
     bad_login = {
-        "email": "test.owner@acme-defense.pk",
+        "email": test_email,
         "password": "WrongPassword999!",
     }
     res_bad = client.post("/api/v1/auth/login", json=bad_login)
@@ -54,7 +59,7 @@ def test_auth_signup_login_and_rbac():
     res_me = client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {token}"})
     assert res_me.status_code == 200
     me_data = res_me.json()
-    assert me_data["email"] == "test.owner@acme-defense.pk"
+    assert me_data["email"] == test_email
     assert me_data["role"] == "owner_admin"
     assert me_data["organization_name"] == "Acme Defense Systems"
 

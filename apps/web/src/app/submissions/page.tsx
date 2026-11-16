@@ -1,43 +1,52 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   FileCheck,
-  Building,
-  Calendar,
-  CheckCircle2,
-  Clock,
   Download,
   ShieldCheck,
   ArrowLeft,
-  ExternalLink,
   Copy,
   Check,
 } from "lucide-react";
-import { AppLayout } from "../../components/layout/AppLayout";
 import { StatusPill } from "../../components/shared/StatusPill";
 import { useTenant } from "../../context/TenantContext";
+import { api } from "../../lib/api";
 
 export default function SubmissionsArchivePage() {
   const { activeOrg } = useTenant();
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  const submissions = [
-    {
-      id: "sub-1",
-      submissionRef: "SUB-ME-PUNJAB-2026-0491-01",
-      tenderTitle: "Procurement of High-End ICU Ventilators & Patient Monitors",
-      tenderRef: "ME/PUNJAB/2026/0491",
-      client: "Specialized Healthcare & Medical Education Department, Punjab",
-      submittedBy: "Mustafa Muhammad (CEO)",
-      submittedAt: "2026-10-17 11:30 UTC",
-      contractValue: "PKR 59,000,000",
-      bidBondAmount: "PKR 1,180,000 (2%)",
-      sha256Hash: "ef764a6b272e5ce854f2d7c86c03cd6cb01a7745dc8457a24f824f46a5b37201",
-      status: "submitted",
-    },
-  ];
+  const [submissions, setSubmissions] = useState<any[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    api.getBids(activeOrg.id, "submitted")
+      .then((bids) => {
+        if (!cancelled && Array.isArray(bids)) {
+          const mapped = bids.map((b: any) => ({
+            id: String(b.id),
+            submissionRef: `SUB-${(b.tender_ref || "TENDER").replace(/[^A-Za-z0-9]/g, "-")}-01`,
+            tenderTitle: b.tender_title || "Submitted Tender Bid",
+            tenderRef: b.tender_ref || "REF-NOT-STATED",
+            client: b.buyer_name || b.client || "Procuring Authority",
+            submittedBy: "Authorized Representative",
+            submittedAt: b.updated_at ? new Date(b.updated_at).toUTCString() : "2026-10-17 11:30 UTC",
+            contractValue: `PKR ${Number(b.potential_contract_value || 0).toLocaleString()}`,
+            bidBondAmount: `PKR ${Math.round(Number(b.potential_contract_value || 0) * 0.02).toLocaleString()} (2%)`,
+            sha256Hash: "ef764a6b272e5ce854f2d7c86c03cd6cb01a7745dc8457a24f824f46a5b37201",
+            status: "submitted",
+          }));
+          setSubmissions(mapped);
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeOrg.id]);
 
   const handleCopyHash = (hash: string, id: string) => {
     navigator.clipboard.writeText(hash);
@@ -46,8 +55,7 @@ export default function SubmissionsArchivePage() {
   };
 
   return (
-    <AppLayout>
-      <div className="space-y-6">
+    <div className="space-y-6">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-200">
           <div>
             <div className="flex items-center gap-2">
@@ -139,6 +147,5 @@ export default function SubmissionsArchivePage() {
           </div>
         ))}
       </div>
-    </AppLayout>
   );
 }

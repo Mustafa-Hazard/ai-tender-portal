@@ -1,27 +1,21 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   ShieldCheck,
   AlertTriangle,
   CheckCircle2,
   XCircle,
   HelpCircle,
-  Sparkles,
   UserCheck,
   FileText,
   Building,
-  RotateCcw,
-  Check,
   AlertOctagon,
-  ExternalLink,
-  ChevronRight,
-  Info,
 } from "lucide-react";
-import { AppLayout } from "../../components/layout/AppLayout";
 import { StatusPill } from "../../components/shared/StatusPill";
 import { CitationLink } from "../../components/shared/CitationLink";
 import { useTenant } from "../../context/TenantContext";
+import { api } from "../../lib/api";
 
 interface RequirementItem {
   id: string;
@@ -59,58 +53,43 @@ const TENDERS = [
   },
 ];
 
-const INITIAL_REQUIREMENTS: RequirementItem[] = [
-  {
-    id: "req-1",
-    code: "REQ-LEG-01",
-    category: "Legal",
-    kind: "mandatory",
-    originalText: "The bidder must be on Active Taxpayers List (ATL) of FBR with valid NTN and Sales Tax Registration on tender opening date.",
-    citation: "Section 3.1(a), Page 14 - Legal Eligibility Criteria",
-    aiStatus: "meets_requirement",
-    aiConfidence: 0.98,
-    reviewerStatus: "meets_requirement",
-    linkedEvidenceTitle: "Active Taxpayer Status Certificate 2026-27",
-    linkedEvidenceExpiresOn: "2027-07-14",
-    isEvidenceExpired: false,
-    notes: "Verified against FBR active portal records.",
-  },
-  {
-    id: "req-2",
-    code: "REQ-TEC-01",
-    category: "Technical",
-    kind: "mandatory",
-    originalText: "Manufacturer must hold valid ISO 13485 certification and FDA 510(k) or CE Marking under MDR for all quoted models.",
-    citation: "Section 4.2(c), Page 28 - Quality Management Standards",
-    aiStatus: "meets_requirement",
-    aiConfidence: 0.95,
-    reviewerStatus: "meets_requirement",
-    linkedEvidenceTitle: "ISO 13485:2016 Medical Devices Quality Management System",
-    linkedEvidenceExpiresOn: "2028-10-11",
-    isEvidenceExpired: false,
-    notes: "Accredited by BSI with full MDR annex scope.",
-  },
-  {
-    id: "req-3",
-    code: "REQ-FIN-01",
-    category: "Financial",
-    kind: "mandatory",
-    originalText: "Average annual turnover of minimum PKR 100 Million over the last three financial years documented by audited balance sheets.",
-    citation: "Section 5.1(b), Page 36 - Minimum Financial Capacity",
-    aiStatus: "meets_requirement",
-    aiConfidence: 0.92,
-    reviewerStatus: "meets_requirement",
-    linkedEvidenceTitle: "Annual Audited Accounts FY2024-2025",
-    linkedEvidenceExpiresOn: "2027-06-14",
-    isEvidenceExpired: false,
-    notes: "Average 3-yr turnover is PKR 148 Million.",
-  },
-];
-
 export default function ComplianceMatrixPage() {
-  const { activeOrg } = useTenant();
+  const { activeOrg, currentUser } = useTenant();
   const [selectedTenderId, setSelectedTenderId] = useState(TENDERS[0].id);
-  const [requirements, setRequirements] = useState<RequirementItem[]>(INITIAL_REQUIREMENTS);
+  const [requirements, setRequirements] = useState<RequirementItem[]>([]);
+
+  useEffect(() => {
+    let mounted = true;
+    api.getComplianceMatrix(selectedTenderId, activeOrg.id, {
+      "X-Org-Id": activeOrg.id,
+      "X-User-Id": currentUser.id,
+    })
+      .then((data) => {
+        if (!mounted || !data || !data.rows || data.rows.length === 0) return;
+        const mapped = data.rows.map((row: any) => ({
+          id: row.requirement_id,
+          code: row.code || "REQ",
+          category: row.category || "General",
+          kind: row.kind || "mandatory",
+          originalText: row.original_text,
+          citation: typeof row.citation === "object" ? `Page ${row.citation?.page_number || 1}` : (row.citation || "Tender Document"),
+          aiStatus: row.ai_status || "meets_requirement",
+          aiConfidence: row.extraction_confidence || 0.95,
+          reviewerStatus: row.reviewer_status || "unreviewed",
+          linkedEvidenceTitle: row.linked_evidence?.title,
+          linkedEvidenceExpiresOn: row.linked_evidence?.expires_on,
+          isEvidenceExpired: row.is_evidence_expired || false,
+          notApplicableJustification: row.not_applicable_justification || "",
+          notes: row.notes || "",
+        }));
+        setRequirements(mapped);
+      })
+      .catch(() => {});
+
+    return () => {
+      mounted = false;
+    };
+  }, [selectedTenderId, activeOrg.id, currentUser.id]);
   
   // Rule 6 Modal State
   const [justificationModalReq, setJustificationModalReq] = useState<RequirementItem | null>(null);
@@ -140,7 +119,19 @@ export default function ComplianceMatrixPage() {
         )
       );
     } else {
-      setRequirements(INITIAL_REQUIREMENTS);
+      setRequirements((prev) =>
+        prev.map((r) =>
+          r.code === "REQ-LEG-01"
+            ? {
+                ...r,
+                linkedEvidenceTitle: "Active Taxpayer Status Certificate 2026-27",
+                linkedEvidenceExpiresOn: "2027-07-14",
+                isEvidenceExpired: false,
+                reviewerStatus: "meets_requirement",
+              }
+            : r
+        )
+      );
     }
   };
 
@@ -148,7 +139,7 @@ export default function ComplianceMatrixPage() {
   const totalReqs = requirements.length;
   const mandatoryReqs = requirements.filter((r) => r.kind === "mandatory");
   const reviewedCount = requirements.filter((r) => r.reviewerStatus !== "unreviewed").length;
-  const coveragePercent = Math.round((reviewedCount / totalReqs) * 100);
+  const coveragePercent = totalReqs > 0 ? Math.round((reviewedCount / totalReqs) * 100) : 0;
 
   // Check blockers
   const blockers: string[] = [];
@@ -181,7 +172,7 @@ export default function ComplianceMatrixPage() {
       ? "ready_to_submit"
       : "in_progress";
 
-  const handleStatusChange = (req: RequirementItem, newStatus: any) => {
+  const handleStatusChange = async (req: RequirementItem, newStatus: any) => {
     if (newStatus === "not_applicable") {
       setJustificationModalReq(req);
       setJustificationInput(req.notApplicableJustification || "");
@@ -194,10 +185,20 @@ export default function ComplianceMatrixPage() {
             : r
         )
       );
+      try {
+        await api.updateAssessment(
+          req.id,
+          activeOrg.id,
+          { reviewer_status: newStatus, notes: req.notes },
+          { "X-Org-Id": activeOrg.id, "X-User-Id": currentUser.id }
+        );
+      } catch {
+        // network or server error handled gracefully
+      }
     }
   };
 
-  const handleSaveJustification = () => {
+  const handleSaveJustification = async () => {
     if (!justificationInput.trim()) {
       setJustificationError("RULE 6 MANDATORY: You must record an audit-grade justification explaining why this tender requirement does not apply.");
       return;
@@ -215,13 +216,22 @@ export default function ComplianceMatrixPage() {
             : r
         )
       );
+      try {
+        await api.updateAssessment(
+          justificationModalReq.id,
+          activeOrg.id,
+          { reviewer_status: "not_applicable", not_applicable_justification: justificationInput.trim() },
+          { "X-Org-Id": activeOrg.id, "X-User-Id": currentUser.id }
+        );
+      } catch {
+        // network or server error handled gracefully
+      }
     }
     setJustificationModalReq(null);
   };
 
   return (
-    <AppLayout>
-      <div className="space-y-6">
+    <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-200">
           <div>
@@ -369,8 +379,8 @@ export default function ComplianceMatrixPage() {
               Evaluated Tender Requirements ({requirements.length})
             </div>
             <div className="text-xs text-slate-500 flex items-center gap-4">
-              <span className="flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-purple-600" /> AI Pre-screen Suggestion
+              <span className="flex items-center gap-1.5 font-medium text-slate-600">
+                Automated Pre-Screen
               </span>
               <span className="flex items-center gap-1.5">
                 <UserCheck className="w-3.5 h-3.5 text-blue-600" /> Evaluator Human Sign-off
@@ -421,12 +431,11 @@ export default function ComplianceMatrixPage() {
                       )}
                     </td>
 
-                    {/* AI Suggestion (Rule 6: Clearly labeled as AI) */}
+                    {/* AI Suggestion (Rule 6: Clearly labeled as automated pre-screen) */}
                     <td className="py-4 px-4 align-top w-44">
-                      <div className="p-2 bg-purple-50/70 border border-purple-200 rounded-lg">
-                        <div className="flex items-center gap-1 text-[11px] font-semibold text-purple-900">
-                          <Sparkles className="w-3.5 h-3.5 text-purple-600" />
-                          <span>AI Pre-Screen</span>
+                      <div className="p-2 bg-slate-50 border border-slate-200 rounded-lg">
+                        <div className="text-[11px] font-semibold text-slate-700">
+                          Automated Pre-Screen
                         </div>
                         <div className="mt-1">
                           <StatusPill
@@ -434,7 +443,7 @@ export default function ComplianceMatrixPage() {
                             variant={req.aiStatus === "meets_requirement" ? "success" : "danger"}
                           />
                         </div>
-                        <div className="text-[10px] text-purple-700 mt-1 font-mono">
+                        <div className="text-[10px] text-slate-500 mt-1 font-mono">
                           Confidence: {(req.aiConfidence * 100).toFixed(0)}%
                         </div>
                       </div>
@@ -550,6 +559,5 @@ export default function ComplianceMatrixPage() {
           </div>
         )}
       </div>
-    </AppLayout>
   );
 }

@@ -5,7 +5,6 @@ from sqlalchemy import DateTime, ForeignKey, Integer, Numeric, String, Text, Uni
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base, IDMixin, TimestampMixin, utcnow
-from app.db.types import JSONType
 
 
 class OutcomeRecord(IDMixin, TimestampMixin, Base):

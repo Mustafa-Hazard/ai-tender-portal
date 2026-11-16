@@ -1,6 +1,7 @@
 ﻿"use client";
 
-import React, { createContext, useContext, useState, ReactNode } from "react";
+import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { setApiAuthContext } from "../lib/api";
 
 export type UIState = "populated" | "empty" | "loading" | "error" | "permission_denied" | "stale";
 
@@ -135,12 +136,31 @@ export function TenantProvider({ children }: { children: ReactNode }) {
     },
   ]);
 
+  const ROLE_USER_MAP: Record<Role, { idSuffix: string; fullName: string }> = {
+    owner_admin: { idSuffix: "000000000001", fullName: "Mustafa Khan (Owner/Admin)" },
+    bid_manager: { idSuffix: "000000000002", fullName: "Fatima Ali (Bid Manager)" },
+    compliance_reviewer: { idSuffix: "000000000003", fullName: "Bilal Ahmed (Compliance Reviewer)" },
+    technical_contributor: { idSuffix: "000000000004", fullName: "Zainab Noor (Technical Contributor)" },
+    finance_contributor: { idSuffix: "000000000005", fullName: "Usman Tariq (Finance Contributor)" },
+    approver: { idSuffix: "000000000006", fullName: "Ayesha Siddiqui (Executive Approver)" },
+    business_development: { idSuffix: "000000000007", fullName: "Hamza Malik (BD Manager)" },
+    viewer: { idSuffix: "000000000008", fullName: "Sara Raza (Observer/Viewer)" },
+  };
+
+  const orgPrefix = activeOrg.id.slice(0, 8);
+  const roleConfig = ROLE_USER_MAP[currentRole] || ROLE_USER_MAP.bid_manager;
+  const currentUserId = `${orgPrefix}-0000-0000-0000-${roleConfig.idSuffix}`;
+
   const currentUser: User = {
-    id: "usr-001",
-    email: "mustafa.bid@apex-health.example",
-    fullName: "Mustafa Muhammad",
+    id: currentUserId,
+    email: `${currentRole}@${activeOrg.name.toLowerCase().includes("apex") ? "apex-health" : activeOrg.name.toLowerCase().includes("delta") ? "delta-eng" : "indus-logistics"}.example`,
+    fullName: roleConfig.fullName,
     role: currentRole,
   };
+
+  useEffect(() => {
+    setApiAuthContext(activeOrg.id, currentUserId);
+  }, [activeOrg.id, currentUserId]);
 
   const hasRole = (allowedRoles: Role[]): boolean => {
     if (isPlatformAdmin) return true;

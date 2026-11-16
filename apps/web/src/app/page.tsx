@@ -1,6 +1,6 @@
-﻿"use client";
+"use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   TrendingUp,
@@ -19,6 +19,7 @@ import { useTenant } from "../context/TenantContext";
 import { TenderCard, TenderCardData } from "../components/shared/TenderCard";
 import { FilterChip } from "../components/shared/FilterChip";
 import { Timeline, TimelineMilestone } from "../components/shared/Timeline";
+import { api } from "../lib/api";
 
 export default function DashboardPage() {
   const { activeOrg, currentRole, uiState, setUiState } = useTenant();
@@ -105,6 +106,42 @@ export default function DashboardPage() {
       isStale: true,
     },
   ];
+
+  const [tendersList, setTendersList] = useState<TenderCardData[]>(sampleTenders);
+
+  useEffect(() => {
+    let cancelled = false;
+    api.getTenders()
+      .then((res: any) => {
+        if (!cancelled && res && Array.isArray(res.items) && res.items.length > 0) {
+          const mapped: TenderCardData[] = res.items.map((t: any) => ({
+            id: String(t.id),
+            title: t.title,
+            buyerName: t.buyer_name || "Procuring Authority",
+            referenceNumber: t.reference_number || "REF-NOT-STATED",
+            category: t.category || "General Procurement",
+            country: t.country || "PK",
+            city: t.city || "Islamabad",
+            estimatedValue: t.estimated_value ? Number(t.estimated_value) : null,
+            currency: t.currency || null,
+            deadlineAt: t.deadline_at || null,
+            deadlineTimezone: t.deadline_timezone || "Asia/Karachi",
+            lifecycleStatus: t.lifecycle_status || "open",
+            sourceName: t.source_name || "Federal EPADS Portal",
+            fitScore: t.fit_score || 90,
+            mandatoryEligibility: t.mandatory_eligibility || "potentially_eligible",
+            submissionReadiness: t.submission_readiness || "in_progress",
+            isStale: false,
+          }));
+          setTendersList(mapped);
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const milestones: TimelineMilestone[] = [
     {
@@ -195,18 +232,18 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
       {/* Top Banner: Scenario Context & Setup */}
-      <div className="flex flex-wrap items-center justify-between gap-4 p-4 rounded-lg bg-white border border-slate-200 shadow-2xs">
+      <div className="flex flex-wrap items-center justify-between gap-4 p-5 rounded-lg bg-white border border-slate-200">
         <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl font-extrabold text-[#0b1c30] tracking-tight">
-              Bid Management Command Center
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-xl font-bold text-slate-900 tracking-tight">
+              Bid Management
             </h1>
-            <span className="px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-blue-100 text-blue-900 border border-blue-200">
+            <span className="px-2 py-0.5 rounded text-[11px] font-mono font-medium bg-slate-100 text-slate-700 border border-slate-200">
               Scenario {activeOrg.scenario}
             </span>
           </div>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Active Workspace: <strong className="text-slate-800">{activeOrg.name}</strong> • NTN: {activeOrg.ntn}
+          <p className="text-xs text-slate-500 mt-1">
+            Workspace: <strong className="text-slate-800 font-semibold">{activeOrg.name}</strong> • NTN: {activeOrg.ntn}
           </p>
         </div>
 
@@ -215,8 +252,8 @@ export default function DashboardPage() {
             href="/onboarding"
             className="px-3 py-1.5 rounded-md text-xs font-semibold bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 transition-colors flex items-center gap-1.5"
           >
-            <Building className="w-3.5 h-3.5 text-blue-600" />
-            <span>Setup Profile ({activeOrg.profileCompleteness}%)</span>
+            <Building className="w-3.5 h-3.5 text-slate-500" />
+            <span>Profile ({activeOrg.profileCompleteness}%)</span>
           </Link>
           <Link
             href="/tenders"
@@ -332,9 +369,6 @@ export default function DashboardPage() {
               <h2 className="text-base font-bold text-slate-900">
                 Recommended & Active Tenders
               </h2>
-              <p className="text-xs text-slate-500">
-                Four distinct indicators displayed separately per AGENTS.md Rule 4
-              </p>
             </div>
 
             {/* Filter Chips matching Section 15 */}
@@ -364,7 +398,7 @@ export default function DashboardPage() {
           </div>
 
           <div className="space-y-3">
-            {sampleTenders
+            {tendersList
               .filter((t) => {
                 if (selectedFilter === "high_fit") return (t.fitScore || 0) >= 85;
                 if (selectedFilter === "eligible") return t.mandatoryEligibility === "potentially_eligible";
@@ -389,7 +423,7 @@ export default function DashboardPage() {
           {/* Quick Access to Key Workspaces */}
           <div className="p-4 bg-white border border-slate-200 rounded-lg shadow-2xs">
             <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-3">
-              Bidder SaaS Workspaces
+              Workspaces
             </h4>
             <div className="space-y-2">
               <Link
@@ -400,7 +434,7 @@ export default function DashboardPage() {
                   <ShieldCheck className="w-4 h-4 text-emerald-600" />
                   <div>
                     <div className="font-bold text-slate-800 group-hover:text-blue-600">Compliance Center</div>
-                    <div className="text-[10px] text-slate-400">Requirement matrix & AI citation assistant</div>
+                    <div className="text-[10px] text-slate-400">Requirement matrix and citation links</div>
                   </div>
                 </div>
                 <ArrowRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-blue-600" />
@@ -414,7 +448,7 @@ export default function DashboardPage() {
                   <Layers className="w-4 h-4 text-blue-600" />
                   <div>
                     <div className="font-bold text-slate-800 group-hover:text-blue-600">Participation Board</div>
-                    <div className="text-[10px] text-slate-400">10-stage gated Kanban pipeline</div>
+                    <div className="text-[10px] text-slate-400">Stage-gated bid pursuit pipeline</div>
                   </div>
                 </div>
                 <ArrowRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-blue-600" />
@@ -425,7 +459,7 @@ export default function DashboardPage() {
                 className="flex items-center justify-between p-2.5 rounded-md hover:bg-slate-50 border border-slate-100 transition-colors group text-xs"
               >
                 <div className="flex items-center gap-2">
-                  <FolderLock className="w-4 h-4 text-purple-600" />
+                  <FolderLock className="w-4 h-4 text-slate-600" />
                   <div>
                     <div className="font-bold text-slate-800 group-hover:text-blue-600">Document Vault</div>
                     <div className="text-[10px] text-slate-400">Verified evidence with expiry tracking</div>

@@ -10,17 +10,15 @@ from sqlalchemy.orm import Session
 from app.models.audit import AuditEvent
 from app.models.bid import Bid
 from app.models.compliance import Evidence, Requirement
-from app.models.organization import Organization
+from app.models.organization import Organization, Membership, User
 from app.models.proposal import Proposal, ProposalSection
 from app.models.tender import Tender
 from app.schemas.proposal import (
-    ProposalCreate,
     ProposalExportOut,
     ProposalGenerateIn,
     ProposalOut,
     ProposalSectionOut,
     ProposalSectionUpdate,
-    ProposalUpdate,
 )
 
 DEFAULT_SECTIONS = [
@@ -121,6 +119,12 @@ def get_or_create_proposal(
         select(Bid).where(Bid.id == bid_id, Bid.organization_id == organization_id)
     ).scalar_one_or_none()
     if not bid:
+        existing = db.execute(select(Bid).where(Bid.id == bid_id)).scalar_one_or_none()
+        if existing and existing.organization_id != organization_id:
+            raise HTTPException(
+                status_code=403,
+                detail="Cross-tenant access forbidden: bid belongs to another organization",
+            )
         raise HTTPException(status_code=404, detail="Bid not found")
 
     tender = db.execute(select(Tender).where(Tender.id == bid.tender_id)).scalar_one_or_none()
@@ -175,6 +179,12 @@ def get_proposal_by_id(db: Session, proposal_id: uuid.UUID, organization_id: uui
         select(Proposal).where(Proposal.id == proposal_id, Proposal.organization_id == organization_id)
     ).scalar_one_or_none()
     if not prop:
+        existing = db.execute(select(Proposal).where(Proposal.id == proposal_id)).scalar_one_or_none()
+        if existing and existing.organization_id != organization_id:
+            raise HTTPException(
+                status_code=403,
+                detail="Cross-tenant access forbidden: proposal belongs to another organization",
+            )
         raise HTTPException(status_code=404, detail="Proposal not found")
 
     sections = db.execute(
@@ -199,6 +209,12 @@ def generate_proposal_content(
         select(Proposal).where(Proposal.id == proposal_id, Proposal.organization_id == organization_id)
     ).scalar_one_or_none()
     if not prop:
+        existing = db.execute(select(Proposal).where(Proposal.id == proposal_id)).scalar_one_or_none()
+        if existing and existing.organization_id != organization_id:
+            raise HTTPException(
+                status_code=403,
+                detail="Cross-tenant access forbidden: proposal belongs to another organization",
+            )
         raise HTTPException(status_code=404, detail="Proposal not found")
 
     tender = db.execute(select(Tender).where(Tender.id == prop.tender_id)).scalar_one_or_none()
@@ -223,6 +239,15 @@ def generate_proposal_content(
     ref_num = tender.reference_number if tender else "REF-NOT-STATED"
     now_str = datetime.now(timezone.utc).strftime("%d %B %Y")
 
+    # Retrieve real authorized signatory for the tenant organization
+    signatory = db.scalar(
+        select(User)
+        .join(Membership, Membership.user_id == User.id)
+        .where(Membership.organization_id == organization_id)
+        .order_by(Membership.created_at.asc())
+    )
+    signatory_name = signatory.full_name if signatory else "Lead Authorized Representative"
+
     for sec in sections:
         if payload.section_keys and sec.section_key not in payload.section_keys:
             continue
@@ -242,7 +267,7 @@ def generate_proposal_content(
                 f"We confirm that the proposal validity period complies with statutory procurement guidelines. "
                 f"All representations made herein are verifiable through official records maintained in our corporate vault.\n\n"
                 f"Authorized Signatory:\n"
-                f"Mustafa Khan\nLead Authorized Representative\n{org_name}\n"
+                f"{signatory_name}\nLead Authorized Representative\n{org_name}\n"
             )
             citations.append({
                 "source": "Tender Notice",
@@ -428,6 +453,12 @@ def update_section(
         select(Proposal).where(Proposal.id == proposal_id, Proposal.organization_id == organization_id)
     ).scalar_one_or_none()
     if not prop:
+        existing = db.execute(select(Proposal).where(Proposal.id == proposal_id)).scalar_one_or_none()
+        if existing and existing.organization_id != organization_id:
+            raise HTTPException(
+                status_code=403,
+                detail="Cross-tenant access forbidden: proposal belongs to another organization",
+            )
         raise HTTPException(status_code=404, detail="Proposal not found")
 
     sec = db.execute(
@@ -462,6 +493,12 @@ def export_proposal_package(
         select(Proposal).where(Proposal.id == proposal_id, Proposal.organization_id == organization_id)
     ).scalar_one_or_none()
     if not prop:
+        existing = db.execute(select(Proposal).where(Proposal.id == proposal_id)).scalar_one_or_none()
+        if existing and existing.organization_id != organization_id:
+            raise HTTPException(
+                status_code=403,
+                detail="Cross-tenant access forbidden: proposal belongs to another organization",
+            )
         raise HTTPException(status_code=404, detail="Proposal not found")
 
     tender = db.execute(select(Tender).where(Tender.id == prop.tender_id)).scalar_one_or_none()

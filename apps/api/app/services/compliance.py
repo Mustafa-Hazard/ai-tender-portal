@@ -5,7 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models.compliance import Evidence, Requirement, RequirementAssessment
-from app.models.enums import ApprovalState, ComplianceStatus, RequirementKind
+from app.models.enums import ComplianceStatus, RequirementKind
 from app.models.tender import Tender
 from app.schemas.compliance import (
     ComplianceMatrixOut,
@@ -96,6 +96,12 @@ def delete_evidence(db: Session, evidence_id: uuid.UUID, organization_id: uuid.U
         select(Evidence).where(Evidence.id == evidence_id, Evidence.organization_id == organization_id)
     ).scalar_one_or_none()
     if not ev:
+        existing = db.execute(select(Evidence).where(Evidence.id == evidence_id)).scalar_one_or_none()
+        if existing and existing.organization_id != organization_id:
+            raise HTTPException(
+                status_code=403,
+                detail="Cross-tenant access forbidden: vault document belongs to another organization",
+            )
         raise HTTPException(status_code=404, detail="Evidence document not found")
     db.delete(ev)
     db.commit()
@@ -108,6 +114,11 @@ def evaluate_compliance_matrix(
     tender = db.execute(select(Tender).where(Tender.id == tender_id)).scalar_one_or_none()
     if not tender:
         raise HTTPException(status_code=404, detail="Tender not found")
+    if tender.organization_id is not None and tender.organization_id != organization_id:
+        raise HTTPException(
+            status_code=403,
+            detail="Cross-tenant access forbidden: private tender belongs to another organization",
+        )
 
     requirements = db.execute(
         select(Requirement).where(Requirement.tender_id == tender_id).order_by(Requirement.created_at)

@@ -128,3 +128,89 @@ def test_edit_proposal_section():
     updated = edit_res.json()
     assert updated["content"] == "Custom vetted executive transmittal content approved by legal officer."
     assert updated["status"] == "approved"
+
+
+def test_proposal_not_found_and_invalid_operations():
+    # 1. Non-existent bid initialization -> 404
+    fake_bid_id = str(uuid.uuid4())
+    fake_org_id = str(uuid.uuid4())
+    res = client.post(
+        f"/api/v1/proposals?organization_id={fake_org_id}",
+        json={"bid_id": fake_bid_id},
+    )
+    assert res.status_code == 404
+    assert "Bid not found" in res.json()["detail"]
+
+    # 2. Non-existent proposal read -> 404
+    fake_prop_id = str(uuid.uuid4())
+    res = client.get(f"/api/v1/proposals/{fake_prop_id}?organization_id={APEX_ORG_ID}")
+    assert res.status_code == 404
+    assert "Proposal not found" in res.json()["detail"]
+
+    # 3. Non-existent section update -> 404
+    init_res = client.post(
+        f"/api/v1/proposals?organization_id={APEX_ORG_ID}",
+        json={"bid_id": VENTILATOR_BID_ID},
+    )
+    prop_id = init_res.json()["id"]
+    fake_sec_id = str(uuid.uuid4())
+    res = client.put(
+        f"/api/v1/proposals/{prop_id}/sections/{fake_sec_id}?organization_id={APEX_ORG_ID}",
+        json={"content": "New content"},
+    )
+    assert res.status_code == 404
+    assert "Proposal section not found" in res.json()["detail"]
+
+
+def test_rule_3_missing_evidence_creates_placeholders():
+    from app.db.session import SessionLocal
+    from app.models.compliance import Requirement
+    from app.models.enums import RequirementKind, RequirementOrigin
+
+    # Add an un-evidenced requirement to the ventilator tender
+    db = SessionLocal()
+    unmet_req_id = uuid.uuid4()
+    req = Requirement(
+        id=unmet_req_id,
+        tender_id=uuid.UUID("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
+        code="REQ-MISSING-TEST-99",
+        category="Specialized Certification",
+        kind=RequirementKind.MANDATORY,
+        original_text="Bidder must provide certified European Space Agency Cleanroom Class 100 accreditation.",
+        citation="RFP Addendum X, Page 4",
+        origin=RequirementOrigin.EXTRACTED,
+        extraction_confidence=0.99,
+    )
+    db.add(req)
+    db.commit()
+    db.close()
+
+    try:
+        # Initialize and generate proposal
+        init_res = client.post(
+            f"/api/v1/proposals?organization_id={APEX_ORG_ID}",
+            json={"bid_id": VENTILATOR_BID_ID},
+        )
+        prop_id = init_res.json()["id"]
+
+        gen_res = client.post(
+            f"/api/v1/proposals/{prop_id}/generate?organization_id={APEX_ORG_ID}",
+            json={"regenerate": True},
+        )
+        assert gen_res.status_code == 200
+        prop_data = gen_res.json()
+
+        # Rule 3 enforcement: missing evidence creates placeholders, NEVER invents qualifications
+        assert prop_data["placeholders_count"] >= 1
+        tech_sec = next(s for s in prop_data["sections"] if s["section_key"] == "technical_response")
+        assert any("REQ-MISSING-TEST-99" in p for p in tech_sec["placeholders"])
+        assert "[PLACEHOLDER: Verified qualification evidence required" in tech_sec["content"]
+    finally:
+        # Clean up the test requirement
+        db = SessionLocal()
+        r = db.get(Requirement, unmet_req_id)
+        if r:
+            db.delete(r)
+            db.commit()
+        db.close()
+

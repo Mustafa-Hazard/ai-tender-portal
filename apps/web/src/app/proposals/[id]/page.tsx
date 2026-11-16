@@ -2,35 +2,28 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import { useParams } from "next/navigation";
 import {
-  FileEdit,
   DollarSign,
   ShieldCheck,
   CheckCircle2,
-  AlertTriangle,
   ArrowLeft,
-  Sparkles,
-  Lock,
   Plus,
-  Trash2,
-  Save,
   Download,
-  Building,
-  Clock,
   Send,
-  Check,
   X,
   FileCheck,
 } from "lucide-react";
-import { AppLayout } from "../../../components/layout/AppLayout";
 import { StatusPill } from "../../../components/shared/StatusPill";
-import { PricingTableShell, PricingLineItem } from "../../../components/shared/PricingTableShell";
+import { PricingLineItem } from "../../../components/shared/PricingTableShell";
 import { ApprovalPanel, ApprovalStep } from "../../../components/shared/ApprovalPanel";
 import { useTenant } from "../../../context/TenantContext";
 import { api } from "../../../lib/api";
 
 export default function ProposalDetailPage() {
-  const { activeOrg } = useTenant();
+  const { activeOrg, currentUser } = useTenant();
+  const params = useParams();
+  const bidId = (params?.id as string) || "aaaaaaaa-bbbb-cccc-dddd-111111111111";
   const [activeTab, setActiveTab] = useState<"commercial" | "technical" | "compliance" | "approvals" | "submission_gate">("submission_gate");
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
@@ -154,9 +147,9 @@ export default function ProposalDetailPage() {
   const handleExecuteSubmission = async () => {
     try {
       const res = await api.submitBidPackage(
-        "aaaaaaaa-bbbb-cccc-dddd-111111111111",
+        bidId,
         activeOrg.id,
-        { submitted_by_name: "Mustafa Khan (Lead Representative)", declaration_accepted: true }
+        { submitted_by_name: currentUser.fullName, declaration_accepted: true }
       );
       setSubmittedReceipt({
         ref: res.submission_reference,
@@ -168,7 +161,7 @@ export default function ProposalDetailPage() {
     } catch {
       // Offline fallback with verifiable SHA-256 seal
       const receipt = {
-        ref: "SUB-ME-PUNJAB-2026-0491-01",
+        ref: `SUB-${bidId.slice(0, 8).toUpperCase()}-2026-01`,
         sha256: "ef764a6b272e5ce854f2d7c86c03cd6cb01a7745dc8457a24f824f46a5b37201",
         timestamp: new Date().toUTCString(),
       };
@@ -179,8 +172,7 @@ export default function ProposalDetailPage() {
   };
 
   return (
-    <AppLayout>
-      <div className="space-y-6">
+    <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-200">
           <div>
@@ -439,8 +431,8 @@ export default function ProposalDetailPage() {
           <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4">
             <div className="flex items-center justify-between pb-2 border-b border-slate-100">
               <h3 className="font-bold text-sm text-slate-900">Section 1: Executive Summary & Technical Approach</h3>
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-800">
-                <Sparkles className="w-3 h-3" /> AI-Assisted Section
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-700">
+                Automated Draft Section
               </span>
             </div>
             <p className="text-xs text-slate-700 leading-relaxed bg-slate-50 p-4 rounded-lg">
@@ -552,6 +544,5 @@ export default function ProposalDetailPage() {
           </div>
         )}
       </div>
-    </AppLayout>
   );
 }

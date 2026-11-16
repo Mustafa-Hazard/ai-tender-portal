@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React from "react";
 import Link from "next/link";
@@ -54,35 +54,35 @@ export function Sidebar() {
       {/* Brand Header */}
       <div className="h-16 px-5 border-b border-slate-200 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2.5 group">
-          <div className="w-8 h-8 rounded-lg bg-[#0051d5] text-white flex items-center justify-center font-bold text-sm shadow-xs group-hover:bg-[#0041ab] transition-colors">
+          <div className="w-7 h-7 rounded-md bg-[#0051d5] text-white flex items-center justify-center font-bold text-xs">
             TP
           </div>
           <div className="flex flex-col">
-            <span className="font-extrabold text-sm text-[#0b1c30] tracking-tight flex items-center gap-1">
-              AI Tender Portal
+            <span className="font-bold text-sm text-slate-900 tracking-tight">
+              Tender Portal
             </span>
-            <span className="text-[10px] text-slate-400 font-mono font-medium">Enterprise Bidder SaaS</span>
+            <span className="text-[10px] text-slate-400 font-mono">Enterprise Bidder SaaS</span>
           </div>
         </Link>
       </div>
 
       {/* Organization Badge Card */}
-      <div className="p-3 m-3 rounded-lg bg-blue-50/60 border border-blue-100 flex flex-col gap-1">
-        <div className="flex items-center justify-between text-[11px] text-blue-900 font-bold">
+      <div className="p-3 m-3 rounded-lg bg-slate-50 border border-slate-200/80 flex flex-col gap-1.5">
+        <div className="flex items-center justify-between text-xs text-slate-900 font-medium">
           <span className="truncate max-w-[170px]" title={activeOrg.name}>
             {activeOrg.name.replace(" (Fictional)", "")}
           </span>
-          <span className="font-mono text-[10px] bg-blue-200 text-blue-950 px-1 rounded">
+          <span className="font-mono text-[10px] bg-slate-200 text-slate-700 px-1 py-0.5 rounded font-semibold">
             PK
           </span>
         </div>
-        <div className="flex items-center justify-between text-[10px] text-slate-500 mt-0.5">
-          <span>Profile Setup:</span>
-          <span className="font-bold text-blue-800">{activeOrg.profileCompleteness}%</span>
+        <div className="flex items-center justify-between text-[11px] text-slate-500">
+          <span>Profile Setup</span>
+          <span className="font-semibold text-slate-800">{activeOrg.profileCompleteness}%</span>
         </div>
         <div className="w-full bg-slate-200 h-1 rounded-full overflow-hidden">
           <div
-            className="bg-blue-600 h-1 rounded-full transition-all"
+            className="bg-[#0051d5] h-1 rounded-full transition-all"
             style={{ width: `${activeOrg.profileCompleteness}%` }}
           />
         </div>
@@ -133,7 +133,7 @@ export function Sidebar() {
           className="flex items-center justify-between p-2 rounded-md text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors"
         >
           <div className="flex items-center gap-2">
-            <Server className="w-4 h-4 text-purple-600" />
+            <Server className="w-4 h-4 text-slate-500" />
             <span>Platform Admin</span>
           </div>
           <ChevronRight className="w-3.5 h-3.5 text-slate-400" />

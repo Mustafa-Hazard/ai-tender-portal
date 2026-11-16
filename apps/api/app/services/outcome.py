@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime, timezone
 from decimal import Decimal, ROUND_HALF_UP
 from fastapi import HTTPException
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from app.models.audit import AuditEvent
@@ -30,6 +30,12 @@ def record_bid_outcome(
         select(Bid).where(Bid.id == bid_id, Bid.organization_id == organization_id)
     ).scalar_one_or_none()
     if not bid:
+        existing = db.execute(select(Bid).where(Bid.id == bid_id)).scalar_one_or_none()
+        if existing and existing.organization_id != organization_id:
+            raise HTTPException(
+                status_code=403,
+                detail="Cross-tenant access forbidden: bid belongs to another organization",
+            )
         raise HTTPException(status_code=404, detail="Bid not found")
 
     tender = db.execute(select(Tender).where(Tender.id == bid.tender_id)).scalar_one_or_none()
@@ -190,7 +196,9 @@ def get_analytics_overview(db: Session, organization_id: uuid.UUID) -> Analytics
 
 
 def get_calendar_events(db: Session, organization_id: uuid.UUID) -> list[CalendarMilestoneOut]:
-    tenders = db.execute(select(Tender)).scalars().all()
+    tenders = db.execute(
+        select(Tender).where(or_(Tender.organization_id.is_(None), Tender.organization_id == organization_id))
+    ).scalars().all()
     tasks = db.execute(select(Task).where(Task.organization_id == organization_id)).scalars().all()
 
     events: list[CalendarMilestoneOut] = []
@@ -205,7 +213,7 @@ def get_calendar_events(db: Session, organization_id: uuid.UUID) -> list[Calenda
                     event_type="submission_deadline",
                     event_date=t.deadline_at,
                     status=t.lifecycle_status.value if hasattr(t.lifecycle_status, "value") else str(t.lifecycle_status),
-                    client=t.category or "Procuring Body",
+                    client=t.buyer_name or t.category or "Procuring Body",
                 )
             )
         if t.published_at:
@@ -217,7 +225,7 @@ def get_calendar_events(db: Session, organization_id: uuid.UUID) -> list[Calenda
                     event_type="published_date",
                     event_date=t.published_at,
                     status="published",
-                    client=t.category or "Procuring Body",
+                    client=t.buyer_name or t.category or "Procuring Body",
                 )
             )
 

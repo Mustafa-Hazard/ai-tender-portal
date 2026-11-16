@@ -1,4 +1,4 @@
-﻿import uuid
+import uuid
 from dataclasses import dataclass
 
 from fastapi import Depends, Header, HTTPException
@@ -63,3 +63,23 @@ def require_role(allowed_roles: list[Role]):
         return ctx
 
     return _role_checker
+
+
+def resolve_org_id(ctx: Context, query_org_id: uuid.UUID | None = None) -> uuid.UUID:
+    """
+    Resolves the active organization ID from multi-tenant Context (headers) or query parameter.
+    Guards against cross-tenant tampering when both are provided.
+    """
+    target = ctx.organization_id or query_org_id
+    if target is None:
+        raise HTTPException(
+            status_code=401,
+            detail="Authentication required: organization credentials are missing.",
+        )
+    if ctx.organization_id is not None and query_org_id is not None and ctx.organization_id != query_org_id:
+        raise HTTPException(
+            status_code=403,
+            detail="Cross-tenant access forbidden: query organization_id does not match authenticated context.",
+        )
+    return target
+

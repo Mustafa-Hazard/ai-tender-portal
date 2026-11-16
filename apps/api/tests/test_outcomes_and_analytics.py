@@ -1,6 +1,5 @@
 import uuid
 from decimal import Decimal
-import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app

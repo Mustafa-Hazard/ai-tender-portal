@@ -3,20 +3,15 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import {
-  Calendar as CalendarIcon,
   Clock,
   Building,
-  AlertCircle,
   CheckCircle2,
   Download,
   Filter,
   ChevronRight,
   ShieldAlert,
-  Bell,
   CalendarDays,
-  ExternalLink,
 } from "lucide-react";
-import { AppLayout } from "../../components/layout/AppLayout";
 import { useTenant } from "../../context/TenantContext";
 import { api } from "../../lib/api";
 
@@ -56,7 +51,7 @@ export default function CalendarMilestonesPage() {
           setLiveMilestones(mapped);
         }
       })
-      .catch((err) => console.log("Milestones offline fallback", err));
+      .catch(() => {});
   }, [activeOrg.id]);
 
   const milestones: MilestoneEvent[] = [
@@ -169,8 +164,7 @@ export default function CalendarMilestonesPage() {
   };
 
   return (
-    <AppLayout>
-      <div className="p-8 max-w-7xl mx-auto space-y-8">
+    <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
@@ -324,7 +318,7 @@ export default function CalendarMilestonesPage() {
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-[#0b1c30] to-[#1e3a5f] p-5 rounded-xl text-white shadow-sm space-y-3">
+            <div className="bg-[#0b1c30] p-5 rounded-lg text-white space-y-3 border border-slate-800">
               <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-blue-300 bg-blue-900/50 px-2 py-0.5 rounded border border-blue-400/20">
                 Rule 7 Expiry Assurance
               </span>
@@ -343,6 +337,5 @@ export default function CalendarMilestonesPage() {
           </div>
         </div>
       </div>
-    </AppLayout>
   );
 }

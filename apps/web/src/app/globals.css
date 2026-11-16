@@ -1,29 +1,30 @@
 @import "tailwindcss";
 
 :root {
-  --canvas: #f8f9ff;
+  --canvas: #f8fafc;
   --surface: #ffffff;
-  --surface-subtle: #f1f5f9;
-  --border: #e2e2e6;
-  --border-strong: #c6c6cd;
+  --surface-subtle: #f8fafc;
+  --surface-hover: #f1f5f9;
+  --border: #e2e8f0;
+  --border-strong: #cbd5e1;
   
-  --navy: #0b1c30;
-  --navy-muted: #45464d;
-  --navy-subtle: #858d97;
+  --navy: #0f172a;
+  --navy-muted: #475569;
+  --navy-subtle: #94a3b8;
   
   --brand-blue: #0051d5;
   --brand-blue-hover: #0041ab;
   --brand-blue-subtle: #eff6ff;
-  --brand-blue-border: #bfd3f4;
+  --brand-blue-border: #bfdbfe;
   
-  --status-success: #009668;
-  --status-success-subtle: #e6f7f0;
+  --status-success: #059669;
+  --status-success-subtle: #ecfdf5;
   --status-warning: #d97706;
-  --status-warning-subtle: #fef3c7;
-  --status-danger: #ba1a1a;
+  --status-warning-subtle: #fffbeb;
+  --status-danger: #dc2626;
   --status-danger-subtle: #fef2f2;
   --status-neutral: #64748b;
-  --status-neutral-subtle: #f1f5f9;
+  --status-neutral-subtle: #f8fafc;
 }
 
 body {
@@ -32,12 +33,13 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   min-height: 100vh;
+  letter-spacing: -0.01em;
 }
 
 /* Custom scrollbars for enterprise tables and drawers */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;

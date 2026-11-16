@@ -1,4 +1,4 @@
-﻿import type { Metadata } from "next";
+import type { Metadata } from "next";
 import "./globals.css";
 import { TenantProvider } from "../context/TenantContext";
 import { AppLayout } from "../components/layout/AppLayout";
@@ -15,7 +15,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="h-full antialiased">
-      <body className="min-h-full flex flex-col bg-[#f8f9ff]">
+      <body className="min-h-full flex flex-col bg-slate-50 text-slate-900">
         <TenantProvider>
           <AppLayout>{children}</AppLayout>
         </TenantProvider>

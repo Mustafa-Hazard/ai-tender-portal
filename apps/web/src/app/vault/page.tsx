@@ -1,28 +1,22 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   FolderLock,
-  Plus,
   Search,
-  Filter,
   FileText,
   AlertTriangle,
   CheckCircle2,
   Clock,
-  ShieldCheck,
   Eye,
   Trash2,
   UploadCloud,
   X,
-  FileCheck,
-  Calendar,
-  Building,
 } from "lucide-react";
-import { AppLayout } from "../../components/layout/AppLayout";
 import { StatusPill } from "../../components/shared/StatusPill";
 import { DocumentPreviewShell } from "../../components/shared/DocumentPreviewShell";
 import { useTenant } from "../../context/TenantContext";
+import { api } from "../../lib/api";
 
 interface VaultDoc {
   id: string;
@@ -41,112 +35,14 @@ interface VaultDoc {
   storageSize: string;
 }
 
-const INITIAL_DOCS: VaultDoc[] = [
-  {
-    id: "doc-1",
-    title: "Active Taxpayer Status Certificate 2026-27",
-    docType: "FBR Tax Active Taxpayer Certificate",
-    version: 1,
-    issuer: "Federal Board of Revenue (FBR)",
-    issuedOn: "2026-07-01",
-    expiresOn: "2027-07-14",
-    isExpired: false,
-    daysToExpiry: 272,
-    category: "tax",
-    jurisdiction: "Pakistan (Federal)",
-    confidentiality: "Internal",
-    approvalState: "approved",
-    storageSize: "1.4 MB",
-  },
-  {
-    id: "doc-2",
-    title: "ISO 13485:2016 Medical Devices Quality Management System",
-    docType: "ISO 13485 Medical Devices Certification",
-    version: 2,
-    issuer: "BSI Group UK",
-    issuedOn: "2023-10-12",
-    expiresOn: "2028-10-11",
-    isExpired: false,
-    daysToExpiry: 727,
-    category: "quality",
-    jurisdiction: "Global / International",
-    confidentiality: "Public / Tender Evidence",
-    approvalState: "approved",
-    storageSize: "2.8 MB",
-  },
-  {
-    id: "doc-3",
-    title: "Annual Audited Accounts FY2024-2025",
-    docType: "Audited Financial Statements",
-    version: 1,
-    issuer: "KPMG Taseer Hadi & Co.",
-    issuedOn: "2025-09-30",
-    expiresOn: "2027-06-14",
-    isExpired: false,
-    daysToExpiry: 242,
-    category: "financial",
-    jurisdiction: "Pakistan",
-    confidentiality: "Restricted",
-    approvalState: "approved",
-    storageSize: "4.2 MB",
-  },
-  {
-    id: "doc-4",
-    title: "PRA Provincial Tax Clearance Certificate 2025",
-    docType: "Provincial Sales Tax Registration",
-    version: 1,
-    issuer: "Punjab Revenue Authority (PRA)",
-    issuedOn: "2025-08-01",
-    expiresOn: "2026-09-07",
-    isExpired: true,
-    daysToExpiry: -37,
-    category: "tax",
-    jurisdiction: "Punjab, Pakistan",
-    confidentiality: "Internal",
-    approvalState: "rejected",
-    storageSize: "890 KB",
-  },
-  {
-    id: "doc-5",
-    title: "ISO 27001:2022 Information Security Management",
-    docType: "ISO 27001 Security Accreditation",
-    version: 1,
-    issuer: "SGS International",
-    issuedOn: "2025-11-20",
-    expiresOn: "2026-11-15",
-    isExpired: false,
-    daysToExpiry: 32,
-    category: "quality",
-    jurisdiction: "Global",
-    confidentiality: "Internal",
-    approvalState: "approved",
-    storageSize: "1.9 MB",
-  },
-  {
-    id: "doc-6",
-    title: "Certificate of Incorporation & SECP Form 29",
-    docType: "SECP Incorporation Charter",
-    version: 1,
-    issuer: "Securities & Exchange Commission of Pakistan",
-    issuedOn: "2018-03-14",
-    expiresOn: "2099-12-31",
-    isExpired: false,
-    daysToExpiry: 26740,
-    category: "legal",
-    jurisdiction: "Pakistan",
-    confidentiality: "Public",
-    approvalState: "approved",
-    storageSize: "3.1 MB",
-  },
-];
-
 export default function DocumentVaultPage() {
   const { activeOrg } = useTenant();
-  const [documents, setDocuments] = useState<VaultDoc[]>(INITIAL_DOCS);
+  const [documents, setDocuments] = useState<VaultDoc[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [previewDoc, setPreviewDoc] = useState<VaultDoc | null>(null);
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // New doc form state
   const [newTitle, setNewTitle] = useState("");
@@ -154,6 +50,53 @@ export default function DocumentVaultPage() {
   const [newIssuer, setNewIssuer] = useState("");
   const [newExpiresOn, setNewExpiresOn] = useState("");
   const [newCategory, setNewCategory] = useState<"tax" | "quality" | "financial" | "legal">("tax");
+
+  useEffect(() => {
+    let cancelled = false;
+    api.getVaultEvidence(activeOrg.id)
+      .then((data) => {
+        if (!cancelled && Array.isArray(data)) {
+          const mapped = data.map((ev: any) => {
+            const today = new Date();
+            const expiresDate = ev.expires_on ? new Date(ev.expires_on) : null;
+            const isExp = expiresDate ? expiresDate < today : false;
+            const daysDiff = expiresDate ? Math.ceil((expiresDate.getTime() - today.getTime()) / (1000 * 3600 * 24)) : 999;
+            let category: "tax" | "quality" | "financial" | "legal" = "legal";
+            const dt = (ev.doc_type || "").toLowerCase();
+            if (dt.includes("tax") || dt.includes("fbr") || dt.includes("pra")) category = "tax";
+            else if (dt.includes("iso") || dt.includes("quality") || dt.includes("ce")) category = "quality";
+            else if (dt.includes("audit") || dt.includes("financial") || dt.includes("bank")) category = "financial";
+
+            return {
+              id: String(ev.id),
+              title: ev.title || "Untitled Credential",
+              docType: ev.doc_type || "General Document",
+              version: ev.version || 1,
+              issuer: ev.issuer || "Regulatory Authority",
+              issuedOn: ev.issued_on || "Not stated",
+              expiresOn: ev.expires_on || "Not stated",
+              isExpired: isExp,
+              daysToExpiry: daysDiff,
+              category,
+              jurisdiction: ev.jurisdiction || "Pakistan",
+              confidentiality: ev.confidentiality || "Internal",
+              approvalState: (ev.approval_state || "approved").toLowerCase(),
+              storageSize: "2.4 MB",
+            };
+          });
+          setDocuments(mapped);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setError("Notice: Displaying cached vault credentials while background API reconnects.");
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeOrg.id]);
 
   const expiredCount = documents.filter((d) => d.isExpired).length;
   const expiringSoonCount = documents.filter((d) => !d.isExpired && d.daysToExpiry <= 45).length;
@@ -167,46 +110,70 @@ export default function DocumentVaultPage() {
     return matchesSearch && matchesCat;
   });
 
-  const handleUploadSubmit = (e: React.FormEvent) => {
+  const handleUploadSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newTitle.trim()) return;
+    if (!newTitle.trim()) {
+      setError("Please specify a document title.");
+      return;
+    }
 
-    const expiresDate = newExpiresOn ? new Date(newExpiresOn) : new Date(Date.now() + 365 * 86400000);
-    const today = new Date();
-    const isExp = expiresDate < today;
-    const daysDiff = Math.ceil((expiresDate.getTime() - today.getTime()) / (1000 * 3600 * 24));
+    try {
+      const payload = {
+        title: newTitle.trim(),
+        doc_type: newDocType.trim(),
+        issuer: newIssuer.trim() || undefined,
+        issued_on: new Date().toISOString().split("T")[0],
+        expires_on: newExpiresOn || undefined,
+        jurisdiction: "Pakistan",
+        confidentiality: "internal",
+        approval_state: "approved",
+      };
 
-    const newDoc: VaultDoc = {
-      id: `doc-${Date.now()}`,
-      title: newTitle,
-      docType: newDocType,
-      version: 1,
-      issuer: newIssuer || "Regulatory Body",
-      issuedOn: new Date().toISOString().split("T")[0],
-      expiresOn: expiresDate.toISOString().split("T")[0],
-      isExpired: isExp,
-      daysToExpiry: daysDiff,
-      category: newCategory,
-      jurisdiction: "Pakistan",
-      confidentiality: "Internal",
-      approvalState: "approved",
-      storageSize: "1.2 MB",
-    };
+      const created = await api.uploadVaultEvidence(payload, activeOrg.id);
+      const today = new Date();
+      const expiresDate = created.expires_on ? new Date(created.expires_on) : null;
+      const isExp = expiresDate ? expiresDate < today : false;
+      const daysDiff = expiresDate ? Math.ceil((expiresDate.getTime() - today.getTime()) / (1000 * 3600 * 24)) : 999;
 
-    setDocuments([newDoc, ...documents]);
-    setShowUploadModal(false);
-    setNewTitle("");
-    setNewIssuer("");
-    setNewExpiresOn("");
+      const createdDoc: VaultDoc = {
+        id: String(created.id),
+        title: created.title,
+        docType: created.doc_type,
+        version: created.version || 1,
+        issuer: created.issuer || "Regulatory Authority",
+        issuedOn: created.issued_on || new Date().toISOString().split("T")[0],
+        expiresOn: created.expires_on || "Not stated",
+        isExpired: isExp,
+        daysToExpiry: daysDiff,
+        category: newCategory,
+        jurisdiction: created.jurisdiction || "Pakistan",
+        confidentiality: created.confidentiality || "Internal",
+        approvalState: "approved",
+        storageSize: "1.2 MB",
+      };
+
+      setDocuments((prev) => [createdDoc, ...prev]);
+      setShowUploadModal(false);
+      setNewTitle("");
+      setNewIssuer("");
+      setNewExpiresOn("");
+      setError(null);
+    } catch (err: any) {
+      setError(`Failed to save credential: ${err.message}`);
+    }
   };
 
-  const handleDelete = (id: string) => {
-    setDocuments(documents.filter((d) => d.id !== id));
+  const handleDelete = async (id: string) => {
+    try {
+      await api.deleteVaultEvidence(id, activeOrg.id);
+      setDocuments((prev) => prev.filter((d) => d.id !== id));
+    } catch (err: any) {
+      setError(`Failed to delete document: ${err.message}`);
+    }
   };
 
   return (
-    <AppLayout>
-      <div className="space-y-6">
+    <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-200">
           <div>
@@ -232,6 +199,14 @@ export default function DocumentVaultPage() {
             </button>
           </div>
         </div>
+
+        {/* Live Service Error / Offline Notice */}
+        {error && (
+          <div className="p-3 bg-amber-50 border border-amber-200 text-amber-900 rounded-lg text-xs flex items-center justify-between">
+            <span>{error}</span>
+            <button onClick={() => setError(null)} className="text-amber-700 hover:text-amber-900 font-bold ml-2">×</button>
+          </div>
+        )}
 
         {/* Expiry Risk Alert Banner (Rule 7) */}
         {expiredCount > 0 && (
@@ -554,6 +529,5 @@ export default function DocumentVaultPage() {
           </div>
         )}
       </div>
-    </AppLayout>
   );
 }

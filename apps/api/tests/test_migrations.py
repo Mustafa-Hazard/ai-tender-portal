@@ -1,4 +1,3 @@
-import pytest
 from alembic.config import Config
 from alembic.script import ScriptDirectory
 from app.db.base import Base

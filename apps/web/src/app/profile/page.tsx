@@ -10,12 +10,8 @@ import {
   MapPin,
   Calendar,
   Globe,
-  TrendingUp,
-  FolderLock,
-  ExternalLink,
   Edit,
 } from "lucide-react";
-import { AppLayout } from "../../components/layout/AppLayout";
 import { StatusPill } from "../../components/shared/StatusPill";
 import { useTenant } from "../../context/TenantContext";
 
@@ -24,13 +20,12 @@ export default function CompanyProfilePage() {
   const [activeTab, setActiveTab] = useState<"overview" | "tax" | "certifications" | "past_performance">("overview");
 
   return (
-    <AppLayout>
-      <div className="space-y-6">
-        {/* Header Profile Card */}
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-          <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
-            <div className="flex items-start gap-4">
-              <div className="w-16 h-16 rounded-xl bg-gradient-to-tr from-blue-700 to-indigo-600 text-white flex items-center justify-center font-bold text-2xl shadow-md">
+    <div className="space-y-6">
+      {/* Header Profile Card */}
+      <div className="bg-white p-6 rounded-xl border border-slate-200">
+        <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
+          <div className="flex items-start gap-4">
+            <div className="w-16 h-16 rounded-lg bg-[#0051d5] text-white flex items-center justify-center font-bold text-2xl">
                 {activeOrg?.name ? activeOrg.name.charAt(0) : "A"}
               </div>
               <div>
@@ -258,6 +253,5 @@ export default function CompanyProfilePage() {
           </div>
         )}
       </div>
-    </AppLayout>
   );
 }

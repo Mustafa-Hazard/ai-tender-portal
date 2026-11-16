@@ -1,7 +1,7 @@
-﻿"use client";
+"use client";
 
 import React, { useState } from "react";
-import { Sparkles, UserCheck } from "lucide-react";
+import { UserCheck } from "lucide-react";
 import { CitationLink } from "./CitationLink";
 
 export interface RequirementData {
@@ -119,12 +119,11 @@ export function RequirementRow({
         )}
       </td>
 
-      {/* AI Suggestion (Rule 6: Distinct from Human) */}
+      {/* Automated Suggestion (Rule 6: Distinct from Human) */}
       <td className="p-3 align-top whitespace-nowrap">
         <div className="flex flex-col gap-1 items-start">
-          <span className="text-[10px] text-slate-400 font-medium flex items-center gap-1">
-            <Sparkles className="w-3 h-3 text-blue-500" />
-            AI Suggestion
+          <span className="text-[10px] text-slate-500 font-mono font-medium uppercase tracking-wider">
+            Automated Pre-Screen
           </span>
           <span className={`px-2 py-0.5 rounded text-[11px] font-semibold border ${aiStatusColors}`}>
             {aiLabels}

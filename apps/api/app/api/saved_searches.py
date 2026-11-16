@@ -21,7 +21,10 @@ def list_saved_searches(
 ):
     """List saved search queries for caller's organization."""
     if not ctx.organization_id:
-        return SavedSearchListOut(items=[], total=0)
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required: X-Org-Id header is missing.",
+        )
 
     rows = db.scalars(
         select(SavedSearch)
@@ -91,6 +94,12 @@ def get_saved_search(
         )
     )
     if not search_obj:
+        existing = db.get(SavedSearch, search_id)
+        if existing and existing.organization_id != ctx.organization_id:
+            raise HTTPException(
+                status_code=403,
+                detail="Cross-tenant access forbidden: saved search belongs to another organization",
+            )
         raise HTTPException(status_code=404, detail="Saved search not found.")
     return search_obj
 
@@ -110,6 +119,12 @@ def update_saved_search(
         )
     )
     if not search_obj:
+        existing = db.get(SavedSearch, search_id)
+        if existing and existing.organization_id != ctx.organization_id:
+            raise HTTPException(
+                status_code=403,
+                detail="Cross-tenant access forbidden: saved search belongs to another organization",
+            )
         raise HTTPException(status_code=404, detail="Saved search not found.")
 
     if payload.name is not None:
@@ -140,6 +155,12 @@ def delete_saved_search(
         )
     )
     if not search_obj:
+        existing = db.get(SavedSearch, search_id)
+        if existing and existing.organization_id != ctx.organization_id:
+            raise HTTPException(
+                status_code=403,
+                detail="Cross-tenant access forbidden: saved search belongs to another organization",
+            )
         raise HTTPException(status_code=404, detail="Saved search not found.")
 
     db.delete(search_obj)
@@ -163,6 +184,12 @@ def run_saved_search(
         )
     )
     if not search_obj:
+        existing = db.get(SavedSearch, search_id)
+        if existing and existing.organization_id != ctx.organization_id:
+            raise HTTPException(
+                status_code=403,
+                detail="Cross-tenant access forbidden: saved search belongs to another organization",
+            )
         raise HTTPException(status_code=404, detail="Saved search not found.")
 
     f = search_obj.filters or {}

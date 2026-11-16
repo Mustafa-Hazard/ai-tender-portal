@@ -1,26 +1,19 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   ShieldCheck,
   CheckCircle2,
-  XCircle,
-  Clock,
   AlertTriangle,
-  Building,
-  DollarSign,
   UserCheck,
   ArrowRight,
-  FileText,
-  AlertOctagon,
-  RefreshCw,
   Check,
   X,
 } from "lucide-react";
-import { AppLayout } from "../../components/layout/AppLayout";
 import { StatusPill } from "../../components/shared/StatusPill";
 import { useTenant } from "../../context/TenantContext";
+import { api } from "../../lib/api";
 
 interface ApprovalTask {
   id: string;
@@ -36,69 +29,58 @@ interface ApprovalTask {
   deadline: string;
 }
 
-const INITIAL_APPROVALS: ApprovalTask[] = [
-  {
-    id: "app-1",
-    bidId: "aaaaaaaa-bbbb-cccc-dddd-111111111111",
-    tenderTitle: "Procurement of High-End ICU Ventilators & Patient Monitors",
-    tenderRef: "ME/PUNJAB/2026/0491",
-    client: "Specialized Healthcare & Medical Education Department, Punjab",
-    contractValue: "PKR 59,000,000",
-    stepName: "Executive & CEO Final Submission Authorization",
-    flowType: "final",
-    requiredRole: "approver (CEO)",
-    status: "pending",
-    deadline: "2026-10-26",
-  },
-  {
-    id: "app-2",
-    bidId: "bbbbbbbb-cccc-dddd-eeee-222222222222",
-    tenderTitle: "Enterprise Cloud Migration & Municipal ERP Datacenter Modernization",
-    tenderRef: "ERP/KHI/2026/8812",
-    client: "Sindh Local Government & Municipal Information Systems Directorate",
-    contractValue: "PKR 85,000,000",
-    stepName: "Commercial Schedule & Margin Verification (Rule 8)",
-    flowType: "commercial",
-    requiredRole: "finance_contributor (CFO)",
-    status: "pending",
-    deadline: "2026-11-02",
-  },
-  {
-    id: "app-3",
-    bidId: "aaaaaaaa-bbbb-cccc-dddd-111111111111",
-    tenderTitle: "Procurement of High-End ICU Ventilators & Patient Monitors",
-    tenderRef: "ME/PUNJAB/2026/0491",
-    client: "Specialized Healthcare & Medical Education Department, Punjab",
-    contractValue: "PKR 59,000,000",
-    stepName: "Mandatory Vault Credentials & Regulatory Audit (Rule 7)",
-    flowType: "legal_compliance",
-    requiredRole: "compliance_reviewer",
-    status: "approved",
-    deadline: "2026-10-24",
-  },
-  {
-    id: "app-4",
-    bidId: "aaaaaaaa-bbbb-cccc-dddd-111111111111",
-    tenderTitle: "Procurement of High-End ICU Ventilators & Patient Monitors",
-    tenderRef: "ME/PUNJAB/2026/0491",
-    client: "Specialized Healthcare & Medical Education Department, Punjab",
-    contractValue: "PKR 59,000,000",
-    stepName: "Technical Specifications & Scope Sign-off",
-    flowType: "technical",
-    requiredRole: "technical_contributor",
-    status: "approved",
-    deadline: "2026-10-22",
-  },
-];
-
 export default function ApprovalsPage() {
-  const { activeOrg } = useTenant();
-  const [approvals, setApprovals] = useState<ApprovalTask[]>(INITIAL_APPROVALS);
+  const { activeOrg, currentUser } = useTenant();
+  const [approvals, setApprovals] = useState<ApprovalTask[]>([]);
   const [activeTab, setActiveTab] = useState<string>("all");
   const [selectedTask, setSelectedTask] = useState<ApprovalTask | null>(null);
   const [actionType, setActionType] = useState<"approve" | "reject" | null>(null);
   const [notesInput, setNotesInput] = useState("");
   const [actionError, setActionError] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+
+    api.getBids(activeOrg.id)
+      .then(async (bidsData) => {
+        if (cancelled || !Array.isArray(bidsData) || bidsData.length === 0) return;
+
+        const tasks: ApprovalTask[] = [];
+        for (const b of bidsData) {
+          try {
+            const steps = await api.getApprovals(String(b.id), activeOrg.id);
+            if (Array.isArray(steps)) {
+              for (const s of steps) {
+                tasks.push({
+                  id: String(s.id),
+                  bidId: String(b.id),
+                  tenderTitle: b.tender_title || "Tender Opportunity",
+                  tenderRef: b.tender_ref || "REF-NOT-STATED",
+                  client: b.buyer_name || b.client || "Procuring Authority",
+                  contractValue: `PKR ${Number(b.potential_contract_value || 0).toLocaleString()}`,
+                  stepName: s.step_name || "Approval Step",
+                  flowType: s.flow_type || "final",
+                  requiredRole: s.required_role || "approver",
+                  status: (s.status || "pending").toLowerCase(),
+                  deadline: b.internal_deadline ? String(b.internal_deadline).split("T")[0] : "2026-10-28",
+                });
+              }
+            }
+          } catch {
+            // ignore step fetch failure for single bid
+          }
+        }
+
+        if (!cancelled) {
+          setApprovals(tasks);
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeOrg.id]);
 
   const pendingCount = approvals.filter((a) => a.status === "pending").length;
   const approvedCount = approvals.filter((a) => a.status === "approved").length;
@@ -118,28 +100,42 @@ export default function ApprovalsPage() {
     setActionError("");
   };
 
-  const handleConfirmAction = () => {
+  const handleConfirmAction = async () => {
     if (!notesInput.trim() || notesInput.trim().length < 3) {
       setActionError("Please provide audit notes (minimum 3 characters).");
       return;
     }
 
     if (selectedTask && actionType) {
-      setApprovals(
-        approvals.map((a) =>
-          a.id === selectedTask.id
-            ? { ...a, status: actionType === "approve" ? "approved" : "changes_requested" }
-            : a
-        )
-      );
+      try {
+        await api.recordApprovalAction(
+          selectedTask.bidId,
+          selectedTask.id,
+          activeOrg.id,
+          {
+            action: actionType === "approve" ? "approve" : "reject",
+            notes: notesInput.trim(),
+            approver_name: currentUser.fullName,
+          }
+        );
+
+        setApprovals(
+          approvals.map((a) =>
+            a.id === selectedTask.id
+              ? { ...a, status: actionType === "approve" ? "approved" : "changes_requested" }
+              : a
+          )
+        );
+        setSelectedTask(null);
+        setActionType(null);
+      } catch (err: any) {
+        setActionError(`Failed to record approval: ${err.message}`);
+      }
     }
-    setSelectedTask(null);
-    setActionType(null);
   };
 
   return (
-    <AppLayout>
-      <div className="space-y-6">
+    <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-200">
           <div>
@@ -348,6 +344,5 @@ export default function ApprovalsPage() {
           </div>
         )}
       </div>
-    </AppLayout>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, use } from "react";
+import React, { useState, use, useEffect } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -25,6 +25,7 @@ import { StatusPill } from "../../../components/shared/StatusPill";
 import { SourceBadge } from "../../../components/shared/SourceBadge";
 import { CitationLink } from "../../../components/shared/CitationLink";
 import { DocumentPreviewShell } from "../../../components/shared/DocumentPreviewShell";
+import { api } from "../../../lib/api";
 
 interface TenderDetailParams {
   params: Promise<{ id: string }>;
@@ -49,7 +50,7 @@ export default function TenderDetailPage({ params }: TenderDetailParams) {
   const [bidDecisionStatus, setBidDecisionStatus] = useState<"pending" | "bidding" | "declined">("pending");
 
   // Sample Detailed Tender Data matching Scenarios
-  const tender = {
+  const fallbackTender = {
     id: tenderId,
     title: "Procurement of High-End ICU Ventilators & Patient Monitors (Sample Fictional Data)",
     buyerName: "Federal Teaching Hospital Islamabad",
@@ -210,6 +211,47 @@ export default function TenderDetailPage({ params }: TenderDetailParams) {
   const handleParticipate = () => {
     setBidDecisionStatus("bidding");
   };
+
+  const [tender, setTender] = useState(fallbackTender);
+
+  useEffect(() => {
+    let mounted = true;
+    api.getTender(tenderId)
+      .then((t) => {
+        if (!mounted || !t) return;
+        setTender((prev) => ({
+          ...prev,
+          id: t.id,
+          title: t.title || prev.title,
+          buyerName: t.buyer_name || prev.buyerName,
+          referenceNumber: t.reference_number || prev.referenceNumber,
+          category: t.category || prev.category,
+          procurementMethod: t.procurement_type || prev.procurementMethod,
+          country: t.country || prev.country,
+          region: t.region || prev.region,
+          city: t.city || prev.city,
+          estimatedValue: t.estimated_value ? Number(t.estimated_value) : prev.estimatedValue,
+          currency: t.currency || prev.currency,
+          publishedAt: t.published_at || prev.publishedAt,
+          deadlineAt: t.deadline_at || prev.deadlineAt,
+          deadlineTimezone: t.deadline_timezone || prev.deadlineTimezone,
+          description: t.description || prev.description,
+          lots: t.lots && t.lots.length > 0 ? t.lots.map((l: any) => ({
+            number: `Lot-${l.lot_number}`,
+            title: l.title,
+            scope: l.scope || "",
+            estimatedValue: Number(l.estimated_value) || 0,
+            currency: l.currency || "PKR",
+            leadTime: "60 calendar days",
+          })) : prev.lots,
+        }));
+      })
+      .catch(() => {});
+
+    return () => {
+      mounted = false;
+    };
+  }, [tenderId]);
 
   const handleDeclineBid = () => {
     if (!notBiddingReason.trim()) return;

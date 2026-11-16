@@ -1,29 +1,21 @@
 "use client";
 
 import React, { useState } from "react";
-import Link from "next/link";
 import {
   BarChart3,
   TrendingUp,
   Award,
-  AlertTriangle,
   CheckCircle2,
   XCircle,
   FileText,
   DollarSign,
   Download,
-  Filter,
   Plus,
   Building,
   ShieldCheck,
-  ChevronRight,
-  ArrowUpRight,
-  ArrowDownRight,
   PieChart,
   Lightbulb,
 } from "lucide-react";
-import { AppLayout } from "../../components/layout/AppLayout";
-import { StatusPill } from "../../components/shared/StatusPill";
 import { useTenant } from "../../context/TenantContext";
 import { api } from "../../lib/api";
 
@@ -47,64 +39,39 @@ export default function ReportsAndAnalyticsPage() {
   const { activeOrg } = useTenant();
   const [selectedFilter, setSelectedFilter] = useState<string>("all");
   const [showDebriefModal, setShowDebriefModal] = useState(false);
-  const [selectedOutcome, setSelectedOutcome] = useState<OutcomeItem | null>(null);
   const [liveAnalytics, setLiveAnalytics] = useState<any>(null);
+  const [outcomesList, setOutcomesList] = useState<OutcomeItem[]>([]);
 
   React.useEffect(() => {
     api.getAnalyticsSummary(activeOrg.id)
       .then((data) => setLiveAnalytics(data))
-      .catch((err) => console.log("Analytics summary offline fallback", err));
+      .catch(() => {});
+
+    api.getOutcomes(activeOrg.id)
+      .then((records) => {
+        if (Array.isArray(records) && records.length > 0) {
+          const mapped: OutcomeItem[] = records.map((r: any) => ({
+            id: String(r.id),
+            bidRef: `BID-${(r.tender_ref || "TENDER").slice(0, 10)}`,
+            tenderTitle: r.tender_title || "Tender Outcome",
+            tenderRef: r.tender_ref || "REF-NOT-STATED",
+            client: r.buyer_name || "Procuring Authority",
+            outcomeStatus: r.outcome_status || "awarded",
+            ourBidAmount: `PKR ${Number(r.actual_bid_amount || 0).toLocaleString()}`,
+            winningBidder: r.winning_bidder || "Apex Healthcare Technologies",
+            winningPrice: `PKR ${Number(r.winning_price || r.actual_bid_amount || 0).toLocaleString()}`,
+            priceVariancePercent: r.price_variance_percentage || 0,
+            debriefNotes: r.debrief_notes || "Decision recorded.",
+            lessonsLearned: r.lessons_learned || "Not stated",
+            recordedDate: r.recorded_at ? String(r.recorded_at).split("T")[0] : "2026-10-17",
+          }));
+          setOutcomesList(mapped);
+        }
+      })
+      .catch(() => {});
   }, [activeOrg.id]);
 
-  const outcomes: OutcomeItem[] = [
-    {
-      id: "out-1",
-      bidRef: "BID-ME-PUNJAB-2026-0491",
-      tenderTitle: "Procurement of High-End ICU Ventilators & Patient Monitors",
-      tenderRef: "ME/PUNJAB/2026/0491",
-      client: "Specialized Healthcare & Medical Education Department, Punjab",
-      outcomeStatus: "awarded",
-      ourBidAmount: "PKR 59,000,000",
-      winningBidder: "Apex MedTech Innovations (Fictional)",
-      winningPrice: "PKR 59,000,000",
-      priceVariancePercent: 0,
-      debriefNotes: "Secured award with highest technical score (98/100) and competitive pricing schedule under Rule 8 deterministic model.",
-      lessonsLearned: "Direct OEM authorization certificates and 5-year warranty SLA were decisive scoring differentiators.",
-      recordedDate: "2026-10-17",
-    },
-    {
-      id: "out-2",
-      bidRef: "BID-HEALTH-SINDH-2026-1082",
-      tenderTitle: "Supply of Diagnostic Ultrasound Systems & Doppler Probes",
-      tenderRef: "HS/SINDH/2026/1082",
-      client: "Sindh Health Services Directorate, Karachi",
-      outcomeStatus: "lost",
-      ourBidAmount: "PKR 48,500,000",
-      winningBidder: "Al-Hakeem Medical Diagnostics Ltd",
-      winningPrice: "PKR 46,200,000",
-      priceVariancePercent: -4.7,
-      debriefNotes: "Evaluated 100% technically responsive, but competitor offered additional 5% discount on bulk consumables pack.",
-      lessonsLearned: "Bundle annual maintenance and consumable spares into standard quote to counter margin erosion.",
-      recordedDate: "2026-09-28",
-    },
-    {
-      id: "out-3",
-      bidRef: "BID-ICT-ISB-2026-0312",
-      tenderTitle: "Turnkey Digital Imaging & PACS Infrastructure Installation",
-      tenderRef: "ICT/ISB/2026/0312",
-      client: "Pakistan Institute of Medical Sciences (PIMS), Islamabad",
-      outcomeStatus: "awarded",
-      ourBidAmount: "PKR 36,000,000",
-      winningBidder: "Apex MedTech Innovations (Fictional)",
-      winningPrice: "PKR 36,000,000",
-      priceVariancePercent: 0,
-      debriefNotes: "Won against 3 competitors. Clean Rule 7 compliance gate eliminated all audit pushbacks during evaluation committee review.",
-      lessonsLearned: "Including cryptographic proof seals in preliminary submission established early evaluator trust.",
-      recordedDate: "2026-08-14",
-    },
-  ];
-
-  const filteredOutcomes = outcomes.filter((item) => {
+  const filteredOutcomes = outcomesList.filter((item) => {
     if (selectedFilter === "all") return true;
     if (selectedFilter === "awarded") return item.outcomeStatus === "awarded";
     if (selectedFilter === "lost") return item.outcomeStatus === "lost";
@@ -112,8 +79,7 @@ export default function ReportsAndAnalyticsPage() {
   });
 
   return (
-    <AppLayout>
-      <div className="p-8 max-w-7xl mx-auto space-y-8">
+    <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
@@ -300,7 +266,7 @@ export default function ReportsAndAnalyticsPage() {
                     : "text-slate-600 hover:text-slate-900"
                 }`}
               >
-                All ({outcomes.length})
+                All ({outcomesList.length})
               </button>
               <button
                 onClick={() => setSelectedFilter("awarded")}
@@ -310,7 +276,7 @@ export default function ReportsAndAnalyticsPage() {
                     : "text-slate-600 hover:text-slate-900"
                 }`}
               >
-                Awarded (2)
+                Awarded ({outcomesList.filter((o) => o.outcomeStatus.toLowerCase() === "awarded").length})
               </button>
               <button
                 onClick={() => setSelectedFilter("lost")}
@@ -320,7 +286,7 @@ export default function ReportsAndAnalyticsPage() {
                     : "text-slate-600 hover:text-slate-900"
                 }`}
               >
-                Lost (1)
+                Lost ({outcomesList.filter((o) => o.outcomeStatus.toLowerCase() === "lost").length})
               </button>
             </div>
           </div>
@@ -487,6 +453,5 @@ export default function ReportsAndAnalyticsPage() {
           </div>
         )}
       </div>
-    </AppLayout>
   );
 }

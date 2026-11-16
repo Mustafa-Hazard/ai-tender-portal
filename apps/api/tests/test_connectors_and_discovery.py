@@ -1,11 +1,9 @@
 import uuid
-from decimal import Decimal
-
 import pytest
 
 from app.models.enums import Role, SourceType
 from app.services.connectors import SampleFederalEProcurementConnector, SampleProvincialPortalConnector
-from app.services.ingestion import IngestionError, extract_requirements_from_text, ingest_document
+from app.services.ingestion import IngestionError, ingest_document
 
 
 def test_connector_sync_and_deduplication(session_factory, member):

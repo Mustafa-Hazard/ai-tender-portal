@@ -248,6 +248,7 @@ class SampleFederalEProcurementConnector(BaseSourceConnector):
         ]
 
 
+
 class SampleProvincialPortalConnector(BaseSourceConnector):
     def __init__(self):
         super().__init__(
@@ -316,3 +317,10 @@ class SampleProvincialPortalConnector(BaseSourceConnector):
                 "lots": [],
             },
         ]
+
+
+AVAILABLE_CONNECTORS: dict[str, BaseSourceConnector] = {
+    "federal-epads": SampleFederalEProcurementConnector(),
+    "punjab-ppra": SampleProvincialPortalConnector(),
+}
+

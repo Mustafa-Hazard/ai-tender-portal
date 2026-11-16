@@ -27,7 +27,11 @@ def _quantize(val: Decimal) -> Decimal:
     return val.quantize(TWOPLACES, rounding=ROUND_HALF_UP)
 
 
-def calculate_pricing(items_in: list[PricingLineItemIn], currency: str = "PKR") -> PricingScheduleOut:
+def calculate_pricing(
+    items_in: list[PricingLineItemIn],
+    currency: str = "PKR",
+    bid_security_rate: Decimal = Decimal("2.00"),
+) -> PricingScheduleOut:
     """
     RULE 8 ENFORCEMENT: Deterministic Decimal Arithmetic
     All line calculations, discounts, tax schedules, and bid security amounts must use
@@ -65,8 +69,8 @@ def calculate_pricing(items_in: list[PricingLineItemIn], currency: str = "PKR") 
         )
 
     grand_total = subtotal_net + total_tax
-    bid_security_rate = Decimal("2.00")  # 2% standard
-    bid_security_amount = _quantize(grand_total * (bid_security_rate / Decimal("100.00")))
+    security_rate = _quantize(bid_security_rate)
+    bid_security_amount = _quantize(grand_total * (security_rate / Decimal("100.00")))
 
     return PricingScheduleOut(
         currency=currency,
@@ -74,9 +78,10 @@ def calculate_pricing(items_in: list[PricingLineItemIn], currency: str = "PKR") 
         subtotal_net=_quantize(subtotal_net),
         total_tax=_quantize(total_tax),
         grand_total=_quantize(grand_total),
-        bid_security_rate_percent=bid_security_rate,
+        bid_security_rate_percent=security_rate,
         bid_security_amount=bid_security_amount,
     )
+
 
 
 def list_bids(db: Session, organization_id: uuid.UUID, stage: BidStage | None = None) -> list[BidOut]:
@@ -124,6 +129,12 @@ def get_bid_or_404(db: Session, bid_id: uuid.UUID, organization_id: uuid.UUID) -
         select(Bid).where(Bid.id == bid_id, Bid.organization_id == organization_id)
     ).scalar_one_or_none()
     if not b:
+        existing = db.execute(select(Bid).where(Bid.id == bid_id)).scalar_one_or_none()
+        if existing and existing.organization_id != organization_id:
+            raise HTTPException(
+                status_code=403,
+                detail="Cross-tenant access forbidden: bid belongs to another organization",
+            )
         raise HTTPException(status_code=404, detail="Bid not found")
 
     tender = db.execute(select(Tender).where(Tender.id == b.tender_id)).scalar_one_or_none()
@@ -155,11 +166,16 @@ def get_bid_or_404(db: Session, bid_id: uuid.UUID, organization_id: uuid.UUID) -
 
 
 def create_bid(db: Session, organization_id: uuid.UUID, payload: BidCreate) -> BidOut:
+    tender = db.execute(select(Tender).where(Tender.id == payload.tender_id)).scalar_one_or_none()
+    if not tender:
+        raise HTTPException(status_code=404, detail="Tender not found")
+
     existing = db.execute(
         select(Bid).where(Bid.organization_id == organization_id, Bid.tender_id == payload.tender_id)
     ).scalar_one_or_none()
     if existing:
         raise HTTPException(status_code=400, detail="A bid for this tender already exists in your organization")
+
 
     bid = Bid(
         organization_id=organization_id,
@@ -183,6 +199,12 @@ def update_bid_stage(db: Session, bid_id: uuid.UUID, organization_id: uuid.UUID,
         select(Bid).where(Bid.id == bid_id, Bid.organization_id == organization_id)
     ).scalar_one_or_none()
     if not bid:
+        existing = db.execute(select(Bid).where(Bid.id == bid_id)).scalar_one_or_none()
+        if existing and existing.organization_id != organization_id:
+            raise HTTPException(
+                status_code=403,
+                detail="Cross-tenant access forbidden: bid belongs to another organization",
+            )
         raise HTTPException(status_code=404, detail="Bid not found")
 
     bid.stage = new_stage
@@ -198,6 +220,12 @@ def update_bid_decision(
         select(Bid).where(Bid.id == bid_id, Bid.organization_id == organization_id)
     ).scalar_one_or_none()
     if not bid:
+        existing = db.execute(select(Bid).where(Bid.id == bid_id)).scalar_one_or_none()
+        if existing and existing.organization_id != organization_id:
+            raise HTTPException(
+                status_code=403,
+                detail="Cross-tenant access forbidden: bid belongs to another organization",
+            )
         raise HTTPException(status_code=404, detail="Bid not found")
 
     bid.decision = payload.decision
@@ -212,6 +240,15 @@ def update_bid_decision(
 
 
 def list_bid_tasks(db: Session, organization_id: uuid.UUID, bid_id: uuid.UUID | None = None) -> list[TaskOut]:
+    if bid_id:
+        bid = db.execute(select(Bid).where(Bid.id == bid_id)).scalar_one_or_none()
+        if not bid:
+            raise HTTPException(status_code=404, detail="Bid not found")
+        if bid.organization_id != organization_id:
+            raise HTTPException(
+                status_code=403,
+                detail="Cross-tenant access forbidden: bid belongs to another organization",
+            )
     stmt = select(Task).where(Task.organization_id == organization_id)
     if bid_id:
         stmt = stmt.where(Task.bid_id == bid_id)
@@ -221,11 +258,14 @@ def list_bid_tasks(db: Session, organization_id: uuid.UUID, bid_id: uuid.UUID | 
 
 
 def create_task(db: Session, organization_id: uuid.UUID, bid_id: uuid.UUID, payload: TaskCreate) -> TaskOut:
-    bid = db.execute(
-        select(Bid).where(Bid.id == bid_id, Bid.organization_id == organization_id)
-    ).scalar_one_or_none()
+    bid = db.execute(select(Bid).where(Bid.id == bid_id)).scalar_one_or_none()
     if not bid:
         raise HTTPException(status_code=404, detail="Bid not found")
+    if bid.organization_id != organization_id:
+        raise HTTPException(
+            status_code=403,
+            detail="Cross-tenant access forbidden: bid belongs to another organization",
+        )
 
     task = Task(
         organization_id=organization_id,
@@ -243,11 +283,14 @@ def create_task(db: Session, organization_id: uuid.UUID, bid_id: uuid.UUID, payl
 
 
 def update_task(db: Session, task_id: uuid.UUID, organization_id: uuid.UUID, payload: TaskUpdate) -> TaskOut:
-    task = db.execute(
-        select(Task).where(Task.id == task_id, Task.organization_id == organization_id)
-    ).scalar_one_or_none()
+    task = db.execute(select(Task).where(Task.id == task_id)).scalar_one_or_none()
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
+    if task.organization_id != organization_id:
+        raise HTTPException(
+            status_code=403,
+            detail="Cross-tenant access forbidden: task belongs to another organization",
+        )
 
     if payload.status:
         task.status = payload.status

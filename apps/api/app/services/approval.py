@@ -53,6 +53,12 @@ def get_or_init_workflow(db: Session, bid_id: uuid.UUID, organization_id: uuid.U
         select(Bid).where(Bid.id == bid_id, Bid.organization_id == organization_id)
     ).scalar_one_or_none()
     if not bid:
+        existing = db.execute(select(Bid).where(Bid.id == bid_id)).scalar_one_or_none()
+        if existing and existing.organization_id != organization_id:
+            raise HTTPException(
+                status_code=403,
+                detail="Cross-tenant access forbidden: bid belongs to another organization",
+            )
         raise HTTPException(status_code=404, detail="Bid not found")
 
     existing = db.execute(

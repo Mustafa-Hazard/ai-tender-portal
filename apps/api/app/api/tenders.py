@@ -1,4 +1,4 @@
-﻿import hashlib
+import hashlib
 import os
 import re
 import uuid
@@ -11,7 +11,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, Query, Response, Up
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.api.deps import Context, get_context, require_member, require_role
+from app.api.deps import Context, get_context, require_role
 from app.core.config import settings
 from app.db.session import get_db
 from app.models import Lot, Tender, TenderVersion

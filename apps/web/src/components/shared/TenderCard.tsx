@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React from "react";
 import { Calendar, Building, AlertTriangle, ShieldAlert, ArrowRight, FileCheck } from "lucide-react";
@@ -111,7 +111,7 @@ export function TenderCard({
 
   return (
     <div
-      className={`p-5 bg-white rounded-lg border border-slate-200 hover:border-blue-300 shadow-xs hover:shadow-md transition-all flex flex-col justify-between group ${className}`}
+      className={`p-6 bg-white rounded-lg border border-slate-200/90 hover:border-slate-300 shadow-xs transition-colors flex flex-col justify-between group ${className}`}
     >
       <div>
         {/* Top Badges */}

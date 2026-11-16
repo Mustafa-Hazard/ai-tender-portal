@@ -1,4 +1,4 @@
-﻿import uuid
+import uuid
 from sqlalchemy.orm import Session
 
 from app.models.audit import AuditEvent

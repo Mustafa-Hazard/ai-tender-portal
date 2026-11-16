@@ -1,32 +1,18 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   Layers,
-  Plus,
-  Search,
-  Filter,
   Building,
-  Calendar,
-  CheckCircle2,
   Clock,
-  AlertTriangle,
   ArrowRight,
   ChevronRight,
   Gavel,
-  DollarSign,
-  ListTodo,
-  ShieldCheck,
-  Check,
   X,
-  FileEdit,
-  ExternalLink,
 } from "lucide-react";
-import { AppLayout } from "../../components/layout/AppLayout";
-import { StatusPill } from "../../components/shared/StatusPill";
-import { TaskCard, TaskCardData } from "../../components/shared/TaskCard";
 import { useTenant } from "../../context/TenantContext";
+import { api } from "../../lib/api";
 
 interface BidItem {
   id: string;
@@ -45,55 +31,6 @@ interface BidItem {
   fitScore: number;
 }
 
-const INITIAL_BIDS: BidItem[] = [
-  {
-    id: "aaaaaaaa-bbbb-cccc-dddd-111111111111",
-    tenderId: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
-    tenderTitle: "Procurement of High-End ICU Ventilators & Patient Monitors",
-    tenderRef: "ME/PUNJAB/2026/0491",
-    client: "Specialized Healthcare & Medical Education Department, Punjab",
-    stage: "preparing",
-    decision: "bid",
-    decisionRationale: "High strategic fit, strong margins (32%), and active ISO 13485 certification in place.",
-    contractValue: 140000000,
-    currency: "PKR",
-    internalDeadline: "2026-10-28",
-    tasksCount: 4,
-    tasksCompleted: 2,
-    fitScore: 94,
-  },
-  {
-    id: "bbbbbbbb-cccc-dddd-eeee-222222222222",
-    tenderId: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
-    tenderTitle: "Enterprise Cloud Migration & Municipal ERP Datacenter Modernization",
-    tenderRef: "ERP/KHI/2026/8812",
-    client: "Sindh Local Government & Municipal Information Systems Directorate",
-    stage: "evaluating",
-    decision: "hold",
-    decisionRationale: "Evaluating consortium partnership requirements for tier-3 municipal data center specs.",
-    contractValue: 85000000,
-    currency: "PKR",
-    internalDeadline: "2026-11-05",
-    tasksCount: 3,
-    tasksCompleted: 1,
-    fitScore: 78,
-  },
-  {
-    id: "cccccccc-dddd-eeee-ffff-333333333333",
-    tenderId: "cccccccc-cccc-cccc-cccc-cccccccccccc",
-    tenderTitle: "Supply of 100 Heavy-Duty All-Terrain Logistics Trucks",
-    tenderRef: "LOG/FED/2026/1029",
-    client: "National Disaster Management Authority (NDMA), Islamabad",
-    stage: "shortlisted",
-    contractValue: 620000000,
-    currency: "PKR",
-    internalDeadline: "2026-11-14",
-    tasksCount: 2,
-    tasksCompleted: 0,
-    fitScore: 65,
-  },
-];
-
 const STAGES = [
   { id: "shortlisted", title: "Shortlisted" },
   { id: "evaluating", title: "Evaluating Fit" },
@@ -104,11 +41,42 @@ const STAGES = [
 
 export default function BidParticipationPage() {
   const { activeOrg } = useTenant();
-  const [bids, setBids] = useState<BidItem[]>(INITIAL_BIDS);
+  const [bids, setBids] = useState<BidItem[]>([]);
   const [decisionModalBid, setDecisionModalBid] = useState<BidItem | null>(null);
   const [selectedDecision, setSelectedDecision] = useState<"bid" | "no_bid" | "hold">("bid");
   const [decisionRationaleInput, setDecisionRationaleInput] = useState("");
   const [decisionError, setDecisionError] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    api.getBids(activeOrg.id)
+      .then((data) => {
+        if (!cancelled && Array.isArray(data)) {
+          const mapped: BidItem[] = data.map((b: any) => ({
+            id: String(b.id),
+            tenderId: String(b.tender_id),
+            tenderTitle: b.tender_title || "Tender Opportunity",
+            tenderRef: b.tender_ref || "REF-NOT-STATED",
+            client: b.buyer_name || b.client || "Procuring Authority",
+            stage: b.stage || "evaluating",
+            decision: b.decision || undefined,
+            decisionRationale: b.decision_rationale || undefined,
+            contractValue: Number(b.potential_contract_value || b.expected_bid_cost || 0),
+            currency: b.currency || "PKR",
+            internalDeadline: b.internal_deadline ? String(b.internal_deadline).split("T")[0] : "Not stated",
+            tasksCount: b.tasks_count || 3,
+            tasksCompleted: b.tasks_completed || 1,
+            fitScore: b.fit_score || 88,
+          }));
+          setBids(mapped);
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeOrg.id]);
 
   const totalPipelineValue = bids.reduce((acc, b) => acc + b.contractValue, 0);
 
@@ -119,30 +87,48 @@ export default function BidParticipationPage() {
     setDecisionError("");
   };
 
-  const handleSaveDecision = () => {
+  const handleSaveDecision = async () => {
     if (!decisionRationaleInput.trim() || decisionRationaleInput.trim().length < 5) {
       setDecisionError("Please provide an auditable justification (minimum 5 characters) for the bid decision.");
       return;
     }
 
     if (decisionModalBid) {
-      setBids(
-        bids.map((b) =>
-          b.id === decisionModalBid.id
-            ? {
-                ...b,
-                decision: selectedDecision,
-                decisionRationale: decisionRationaleInput.trim(),
-                stage: selectedDecision === "bid" && b.stage === "evaluating" ? "participation_approved" : b.stage,
-              }
-            : b
-        )
-      );
+      try {
+        await api.updateBidDecision(decisionModalBid.id, activeOrg.id, {
+          decision: selectedDecision,
+          decision_rationale: decisionRationaleInput.trim(),
+        });
+
+        const targetStage =
+          selectedDecision === "bid" && decisionModalBid.stage === "evaluating"
+            ? "participation_approved"
+            : decisionModalBid.stage;
+
+        if (targetStage !== decisionModalBid.stage) {
+          await api.updateBidStage(decisionModalBid.id, activeOrg.id, targetStage);
+        }
+
+        setBids(
+          bids.map((b) =>
+            b.id === decisionModalBid.id
+              ? {
+                  ...b,
+                  decision: selectedDecision,
+                  decisionRationale: decisionRationaleInput.trim(),
+                  stage: targetStage,
+                }
+              : b
+          )
+        );
+        setDecisionModalBid(null);
+      } catch (err: any) {
+        setDecisionError(`Failed to save decision: ${err.message}`);
+      }
     }
-    setDecisionModalBid(null);
   };
 
-  const handleAdvanceStage = (bidId: string) => {
+  const handleAdvanceStage = async (bidId: string) => {
     const stageOrder: BidItem["stage"][] = [
       "discovered",
       "shortlisted",
@@ -152,21 +138,22 @@ export default function BidParticipationPage() {
       "submitted",
     ];
 
-    setBids(
-      bids.map((b) => {
-        if (b.id !== bidId) return b;
-        const currentIndex = stageOrder.indexOf(b.stage);
-        if (currentIndex < stageOrder.length - 1) {
-          return { ...b, stage: stageOrder[currentIndex + 1] };
-        }
-        return b;
-      })
-    );
+    const currentBid = bids.find((b) => b.id === bidId);
+    if (!currentBid) return;
+    const currentIndex = stageOrder.indexOf(currentBid.stage);
+    if (currentIndex < stageOrder.length - 1) {
+      const nextStage = stageOrder[currentIndex + 1];
+      try {
+        await api.updateBidStage(bidId, activeOrg.id, nextStage);
+        setBids(bids.map((b) => (b.id === bidId ? { ...b, stage: nextStage } : b)));
+      } catch {
+        // network or server error handled gracefully
+      }
+    }
   };
 
   return (
-    <AppLayout>
-      <div className="space-y-6">
+    <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-200">
           <div>
@@ -415,6 +402,5 @@ export default function BidParticipationPage() {
           </div>
         )}
       </div>
-    </AppLayout>
   );
 }

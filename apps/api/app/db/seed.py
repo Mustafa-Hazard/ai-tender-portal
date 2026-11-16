@@ -1,13 +1,16 @@
-﻿import uuid
+import uuid
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.db.base import Base
 from app.models import (
     AuditEvent, Bid, Evidence, Lot, Membership, Organization, Requirement,
     RequirementAssessment, Source, Tender, TenderVersion, User,
 )
+from app.models.saved_search import SavedSearch
 from app.models.enums import (
     ApprovalState, BidDecision, BidStage, ComplianceStatus, RequirementKind,
     RequirementOrigin, Role, SourceHealth, SourceType, TenderLifecycle,
@@ -15,8 +18,50 @@ from app.models.enums import (
 )
 
 
+def _create_org_users(db: Session, org_id: uuid.UUID, hex_prefix: str, org_short: str):
+    """Creates a user and membership for all standard 8 roles for an organization."""
+    role_specs = [
+        ("000000000001", Role.OWNER_ADMIN, "Mustafa Khan (Owner/Admin)", f"admin@{org_short}.example"),
+        ("000000000002", Role.BID_MANAGER, "Fatima Ali (Bid Manager)", f"bid@{org_short}.example"),
+        ("000000000003", Role.COMPLIANCE, "Bilal Ahmed (Compliance Reviewer)", f"compliance@{org_short}.example"),
+        ("000000000004", Role.TECHNICAL, "Zainab Noor (Technical Contributor)", f"tech@{org_short}.example"),
+        ("000000000005", Role.FINANCE, "Usman Tariq (Finance Contributor)", f"finance@{org_short}.example"),
+        ("000000000006", Role.APPROVER, "Ayesha Siddiqui (Executive Approver)", f"approver@{org_short}.example"),
+        ("000000000007", Role.BUSINESS_DEVELOPMENT, "Hamza Malik (BD Manager)", f"bd@{org_short}.example"),
+        ("000000000008", Role.VIEWER, "Sara Raza (Observer/Viewer)", f"viewer@{org_short}.example"),
+    ]
+    created_users = {}
+    for suffix, role, name, email in role_specs:
+        user_id = uuid.UUID(f"{hex_prefix}-0000-0000-0000-{suffix}")
+        user = db.get(User, user_id)
+        if not user:
+            user = User(id=user_id, email=email, full_name=name)
+            db.add(user)
+            db.flush()
+        mem = db.scalar(
+            select(Membership).where(
+                Membership.organization_id == org_id,
+                Membership.user_id == user_id,
+            )
+        )
+        if not mem:
+            mem = Membership(
+                id=uuid.uuid4(),
+                organization_id=org_id,
+                user_id=user_id,
+                role=role,
+            )
+            db.add(mem)
+        created_users[role] = user
+    return created_users
+
+
 def seed_database(db: Session) -> dict:
     """Populates deterministic seed data for Demo Scenarios A, B, and C. All data is visibly marked fictional."""
+    for table in reversed(Base.metadata.sorted_tables):
+        db.execute(table.delete())
+    db.flush()
+
     now = datetime.now(timezone.utc)
     today = date.today()
 
@@ -458,8 +503,132 @@ def seed_database(db: Session) -> dict:
         },
     )
     ver_c1.superseded_by_id = ver_c2.id
-
     db.add_all([tender_c, ver_c1, ver_c2])
+    db.flush()
+
+    # Scenario C Organization & Bid
+    org_c = Organization(
+        id=uuid.UUID("33333333-3333-3333-3333-333333333333"),
+        name="Indus Heavy Logistics & Mobility (Fictional)",
+        registration_country="PK",
+        legal_identifiers={"NTN": "9876543-1", "SECP": "0011223"},
+        business_categories=["Vehicles & Heavy Equipment", "Transport Services"],
+        service_regions=["Federal Capital", "Punjab", "Balochistan"],
+        currencies=["PKR", "USD"],
+        company_size="Large (250+)",
+        min_opportunity_value=Decimal("50000000.00"),
+        max_opportunity_value=Decimal("2000000000.00"),
+        profile_completeness=85,
+    )
+    db.add(org_c)
+    db.flush()
+
+    # Ensure all 8 standard roles exist for all 3 organizations
+    users_a = _create_org_users(db, org_a.id, "11111111", "apex-health")
+    users_b = _create_org_users(db, org_b.id, "22222222", "delta-eng")
+    users_c = _create_org_users(db, org_c.id, "33333333", "indus-logistics")
+
+    # Scenario C Evidence & Bid
+    ev_c_secp = Evidence(
+        id=uuid.uuid4(),
+        organization_id=org_c.id,
+        doc_type="SECP Certificate of Incorporation",
+        title="SECP Heavy Equipment Incorporation & Dealership",
+        version=1,
+        issuer="Securities and Exchange Commission of Pakistan",
+        owner_id=users_c[Role.COMPLIANCE].id,
+        issued_on=today - timedelta(days=500),
+        expires_on=today + timedelta(days=500),
+        jurisdiction="Pakistan",
+        approval_state=ApprovalState.APPROVED,
+        sha256="c0c0c0c0111122223333444455556666777788889999aaaabbbbccccddddeeee",
+    )
+    req_c1 = Requirement(
+        id=uuid.uuid4(),
+        tender_id=tender_c.id,
+        code="REQ-FLEET-01",
+        category="Technical",
+        kind=RequirementKind.MANDATORY,
+        original_text="Mandatory real-time satellite GPS tracking unit per vehicle with 24/7 telemetry reporting.",
+        citation="Corrigendum 01, Page 3, Clause 2.1",
+        origin=RequirementOrigin.EXTRACTED,
+        extraction_confidence=0.98,
+    )
+    req_c2 = Requirement(
+        id=uuid.uuid4(),
+        tender_id=tender_c.id,
+        code="REQ-FLEET-02",
+        category="Commercial",
+        kind=RequirementKind.MANDATORY,
+        original_text="Expedited delivery of all 100 logistics units within 45 days of contract signing.",
+        citation="Corrigendum 01, Page 4, Clause 4.2",
+        origin=RequirementOrigin.EXTRACTED,
+        extraction_confidence=0.97,
+    )
+    bid_c = Bid(
+        id=uuid.UUID("cccccccc-dddd-eeee-ffff-333333333333"),
+        organization_id=org_c.id,
+        tender_id=tender_c.id,
+        stage=BidStage.PREPARING,
+        decision=BidDecision.BID,
+        decision_rationale="NDMA logistics fleet expansion aligns with commercial vehicle inventory.",
+        decided_by_id=users_c[Role.OWNER_ADMIN].id,
+        decided_at=now - timedelta(days=5),
+        owner_id=users_c[Role.BID_MANAGER].id,
+        internal_deadline=now + timedelta(days=10),
+        expected_bid_cost=Decimal("1200000.00"),
+        potential_contract_value=Decimal("850000000.00"),
+        currency="PKR",
+    )
+    ass_c1 = RequirementAssessment(
+        id=uuid.uuid4(),
+        requirement_id=req_c1.id,
+        organization_id=org_c.id,
+        bid_id=bid_c.id,
+        ai_status=ComplianceStatus.MEETS,
+        reviewer_status=ComplianceStatus.MEETS,
+        evidence_id=None,
+        owner_id=users_c[Role.COMPLIANCE].id,
+        notes="Satellite GPS tracking modules available in current inventory.",
+    )
+    ass_c2 = RequirementAssessment(
+        id=uuid.uuid4(),
+        requirement_id=req_c2.id,
+        organization_id=org_c.id,
+        bid_id=bid_c.id,
+        ai_status=ComplianceStatus.NEEDS_INTERPRETATION,
+        reviewer_status=ComplianceStatus.UNREVIEWED,
+        evidence_id=None,
+        owner_id=users_c[Role.BID_MANAGER].id,
+        notes="Corrigendum expedited delivery timeline to 45 days requires manufacturer production review.",
+    )
+    db.add_all([ev_c_secp, req_c1, req_c2, bid_c, ass_c1, ass_c2])
+
+    # Saved Searches for Org A
+    saved_search_1 = SavedSearch(
+        id=uuid.UUID("11111111-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
+        organization_id=org_a.id,
+        user_id=users_a[Role.BID_MANAGER].id,
+        name="Medical & ICU Equipment - Federal/Punjab",
+        filters={"category": "Medical Equipment", "region": "Federal Capital"},
+        alert_cadence="daily_digest",
+        matches_count=1,
+        last_run_at=now - timedelta(hours=2),
+        is_active=True,
+    )
+    saved_search_2 = SavedSearch(
+        id=uuid.UUID("11111111-bbbb-bbbb-bbbb-bbbbbbbbbbbb"),
+        organization_id=org_a.id,
+        user_id=users_a[Role.BID_MANAGER].id,
+        name="High-Value Healthcare Opportunities (>50M PKR)",
+        filters={"min_value": 50000000, "category": "Medical Equipment"},
+        alert_cadence="instant",
+        matches_count=1,
+        last_run_at=now - timedelta(hours=5),
+        is_active=True,
+    )
+    db.add_all([saved_search_1, saved_search_2])
+    db.flush()
 
     # Initial audit events
     db.add(
@@ -484,12 +653,45 @@ def seed_database(db: Session) -> dict:
             after={"reason": "Expired tax registration", "scenario": "Scenario B"},
         )
     )
+    db.add(
+        AuditEvent(
+            organization_id=org_c.id,
+            actor_id=users_c[Role.OWNER_ADMIN].id,
+            action="organization.seed_init",
+            object_type="organization",
+            object_id=str(org_c.id),
+            before=None,
+            after={"name": org_c.name, "scenario": "Scenario C"},
+        )
+    )
 
     db.commit()
+
+    # Initial Proposals Generation
+    try:
+        from app.services.proposal import get_or_create_proposal, generate_proposal_content, ProposalGenerateIn
+        prop_a = get_or_create_proposal(db, bid_a.id, org_a.id)
+        generate_proposal_content(db, prop_a.id, org_a.id, ProposalGenerateIn())
+        prop_c = get_or_create_proposal(db, bid_c.id, org_c.id)
+        generate_proposal_content(db, prop_c.id, org_c.id, ProposalGenerateIn())
+    except Exception:
+        pass
+
     return {
         "org_a": org_a.id,
         "org_b": org_b.id,
+        "org_c": org_c.id,
         "tender_a": tender_a.id,
         "tender_b": tender_b.id,
         "tender_c": tender_c.id,
     }
+
+
+if __name__ == "__main__":
+    from app.db.base import Base
+    from app.db.session import engine, SessionLocal
+    import app.models
+
+    Base.metadata.create_all(bind=engine)
+    with SessionLocal() as session:
+        seed_database(session)

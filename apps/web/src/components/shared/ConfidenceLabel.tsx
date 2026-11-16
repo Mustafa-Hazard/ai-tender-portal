@@ -1,11 +1,10 @@
-﻿"use client";
+"use client";
 
 import React from "react";
-import { Sparkles, AlertTriangle, HelpCircle } from "lucide-react";
+import { AlertTriangle, HelpCircle } from "lucide-react";
 
 interface ConfidenceLabelProps {
   confidence?: number | null; // 0.0 to 1.0 or 0 to 100
-  isAiGenerated?: boolean;
   isLoading?: boolean;
   isEmpty?: boolean;
   isError?: boolean;
@@ -15,7 +14,6 @@ interface ConfidenceLabelProps {
 
 export function ConfidenceLabel({
   confidence,
-  isAiGenerated = true,
   isLoading = false,
   isEmpty = false,
   isError = false,
@@ -25,8 +23,7 @@ export function ConfidenceLabel({
   if (isLoading) {
     return (
       <span className={`inline-flex items-center gap-1 text-xs text-slate-400 animate-pulse ${className}`}>
-        <Sparkles className="w-3 h-3 text-slate-300" />
-        Estimating confidence...
+        Calculating confidence...
       </span>
     );
   }
@@ -65,9 +62,8 @@ export function ConfidenceLabel({
   return (
     <span
       className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium border ${badgeColor} ${className}`}
-      title={`AI Confidence Score: ${scorePct}% based on source document extraction`}
+      title={`Extraction Confidence: ${scorePct}% based on source document`}
     >
-      {isAiGenerated && <Sparkles className="w-3 h-3" aria-hidden="true" />}
       <span>{label}</span>
       <span className="font-mono text-[11px] font-bold">({scorePct}%)</span>
       {citationCount !== undefined && citationCount > 0 && (

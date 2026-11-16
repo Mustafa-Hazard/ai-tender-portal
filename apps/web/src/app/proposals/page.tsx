@@ -1,45 +1,46 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { FileEdit, Building, Calendar, DollarSign, Clock, ArrowRight, CheckCircle2 } from "lucide-react";
-import { AppLayout } from "../../components/layout/AppLayout";
+import { FileEdit, ArrowRight } from "lucide-react";
 import { StatusPill } from "../../components/shared/StatusPill";
 import { useTenant } from "../../context/TenantContext";
+import { api } from "../../lib/api";
 
 export default function ProposalsDirectoryPage() {
   const { activeOrg } = useTenant();
 
-  const proposals = [
-    {
-      id: "aaaaaaaa-bbbb-cccc-dddd-111111111111",
-      title: "Comprehensive Proposal for ICU Ventilators & Central Monitors",
-      tenderTitle: "Procurement of High-End ICU Ventilators & Patient Monitors",
-      tenderRef: "ME/PUNJAB/2026/0491",
-      client: "Specialized Healthcare & Medical Education Department, Punjab",
-      contractValue: "PKR 59,000,000",
-      deadline: "2026-10-28",
-      progress: 85,
-      readinessState: "ready_to_submit",
-      technicalLead: "Dr. Tariq Mahmood",
-    },
-    {
-      id: "bbbbbbbb-cccc-dddd-eeee-222222222222",
-      title: "Municipal Cloud ERP Implementation Proposal",
-      tenderTitle: "Enterprise Cloud Migration & Municipal ERP Datacenter Modernization",
-      tenderRef: "ERP/KHI/2026/8812",
-      client: "Sindh Local Government & Municipal Information Systems Directorate",
-      contractValue: "PKR 85,000,000",
-      deadline: "2026-11-05",
-      progress: 40,
-      readinessState: "in_progress",
-      technicalLead: "Zeeshan Ali",
-    },
-  ];
+  const [proposals, setProposals] = useState<any[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    api.getBids(activeOrg.id)
+      .then((bids) => {
+        if (!cancelled && Array.isArray(bids)) {
+          const mapped = bids.map((b: any) => ({
+            id: String(b.id),
+            title: `Proposal for ${b.tender_title || "Tender"}`,
+            tenderTitle: b.tender_title || "Tender Opportunity",
+            tenderRef: b.tender_ref || "REF-NOT-STATED",
+            client: b.buyer_name || b.client || "Procuring Authority",
+            contractValue: `PKR ${Number(b.potential_contract_value || 0).toLocaleString()}`,
+            deadline: b.internal_deadline ? String(b.internal_deadline).split("T")[0] : "2026-10-28",
+            progress: b.stage === "submitted" ? 100 : b.stage === "preparing" ? 75 : 45,
+            readinessState: b.stage === "submitted" ? "submitted" : b.stage === "preparing" ? "ready_to_submit" : "in_progress",
+            technicalLead: "Lead Bid Representative",
+          }));
+          setProposals(mapped);
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeOrg.id]);
 
   return (
-    <AppLayout>
-      <div className="space-y-6">
+    <div className="space-y-6">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-200">
           <div>
             <div className="flex items-center gap-2">
@@ -106,6 +107,5 @@ export default function ProposalsDirectoryPage() {
           ))}
         </div>
       </div>
-    </AppLayout>
   );
 }

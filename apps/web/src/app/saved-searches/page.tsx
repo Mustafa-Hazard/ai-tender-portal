@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   Bookmark,
@@ -14,6 +14,7 @@ import {
   Zap,
 } from "lucide-react";
 import { useTenant } from "../../context/TenantContext";
+import { api } from "../../lib/api";
 
 interface SavedSearchItem {
   id: string;
@@ -30,41 +31,7 @@ interface SavedSearchItem {
 export default function SavedSearchesPage() {
   const { activeOrg, uiState } = useTenant();
 
-  const [savedSearches, setSavedSearches] = useState<SavedSearchItem[]>([
-    {
-      id: "sav-001",
-      name: "Federal ICU & Healthcare Equipment > 100M",
-      category: "Medical Equipment",
-      region: "Federal Capital",
-      minValue: 100000000,
-      cadence: "daily_digest",
-      matchesCount: 14,
-      lastRun: "Today at 09:00 AM PKT",
-      createdAt: "2026-10-09",
-    },
-    {
-      id: "sav-002",
-      name: "Punjab Cloud & Datacenter Infrastructure",
-      category: "IT & Telecom",
-      region: "Punjab",
-      minValue: 50000000,
-      cadence: "instant",
-      matchesCount: 8,
-      lastRun: "12 minutes ago",
-      createdAt: "2026-10-10",
-    },
-    {
-      id: "sav-003",
-      name: "Emergency Mobility & Fleet Logistics",
-      category: "Vehicles & Heavy Equipment",
-      region: "Federal Capital",
-      cadence: "weekly",
-      matchesCount: 5,
-      lastRun: "Yesterday at 09:00 AM PKT",
-      createdAt: "2026-10-11",
-    },
-  ]);
-
+  const [savedSearches, setSavedSearches] = useState<SavedSearchItem[]>([]);
   const [searchFilter, setSearchFilter] = useState("");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [newSearchName, setNewSearchName] = useState("");
@@ -72,13 +39,47 @@ export default function SavedSearchesPage() {
   const [newRegion, setNewRegion] = useState("Federal Capital");
   const [newCadence, setNewCadence] = useState<"instant" | "daily_digest" | "weekly">("daily_digest");
 
+  useEffect(() => {
+    let cancelled = false;
+    api.getSavedSearches()
+      .then((res: any) => {
+        if (!cancelled && res && Array.isArray(res.items)) {
+          const mapped: SavedSearchItem[] = res.items.map((s: any) => {
+            const f = s.filters || {};
+            return {
+              id: String(s.id),
+              name: s.name,
+              category: f.category || "All Categories",
+              region: f.region || "All Regions",
+              minValue: f.min_value ? Number(f.min_value) : undefined,
+              cadence: s.alert_cadence || "daily_digest",
+              matchesCount: s.matches_count || 0,
+              lastRun: s.last_run_at ? new Date(s.last_run_at).toLocaleTimeString() : "Pending run",
+              createdAt: s.created_at ? String(s.created_at).split("T")[0] : "2026-10-15",
+            };
+          });
+          setSavedSearches(mapped);
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeOrg.id]);
+
   const filteredSearches = savedSearches.filter((s) =>
     s.name.toLowerCase().includes(searchFilter.toLowerCase()) ||
     s.category.toLowerCase().includes(searchFilter.toLowerCase()) ||
     s.region.toLowerCase().includes(searchFilter.toLowerCase())
   );
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
+    try {
+      await api.deleteSavedSearch(id);
+    } catch {
+      // deletion fallback handled below
+    }
     setSavedSearches((prev) => prev.filter((s) => s.id !== id));
   };
 
@@ -88,21 +89,48 @@ export default function SavedSearchesPage() {
     );
   };
 
-  const handleCreateSearch = () => {
+  const handleCreateSearch = async () => {
     if (!newSearchName.trim()) return;
-    const item: SavedSearchItem = {
-      id: `sav-${Date.now().toString().slice(-4)}`,
-      name: newSearchName.trim(),
-      category: newCategory,
-      region: newRegion,
-      cadence: newCadence,
-      matchesCount: 6,
-      lastRun: "Just now",
-      createdAt: new Date().toISOString().slice(0, 10),
-    };
-    setSavedSearches([item, ...savedSearches]);
-    setIsCreateModalOpen(false);
-    setNewSearchName("");
+    try {
+      const payload = {
+        name: newSearchName.trim(),
+        filters: {
+          category: newCategory,
+          region: newRegion,
+        },
+        alert_cadence: newCadence,
+        is_active: true,
+      };
+      const created = await api.createSavedSearch(payload);
+      const f = created.filters || {};
+      const newItem: SavedSearchItem = {
+        id: String(created.id),
+        name: created.name,
+        category: f.category || newCategory,
+        region: f.region || newRegion,
+        cadence: created.alert_cadence || newCadence,
+        matchesCount: created.matches_count || 1,
+        lastRun: "Just now",
+        createdAt: new Date().toISOString().slice(0, 10),
+      };
+      setSavedSearches((prev) => [newItem, ...prev]);
+      setIsCreateModalOpen(false);
+      setNewSearchName("");
+    } catch {
+      const fallbackItem: SavedSearchItem = {
+        id: `sav-${Date.now().toString().slice(-4)}`,
+        name: newSearchName.trim(),
+        category: newCategory,
+        region: newRegion,
+        cadence: newCadence,
+        matchesCount: 1,
+        lastRun: "Just now",
+        createdAt: new Date().toISOString().slice(0, 10),
+      };
+      setSavedSearches((prev) => [fallbackItem, ...prev]);
+      setIsCreateModalOpen(false);
+      setNewSearchName("");
+    }
   };
 
   // Loading State

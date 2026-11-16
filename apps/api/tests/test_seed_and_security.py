@@ -1,15 +1,11 @@
-﻿import uuid
+import uuid
 import pytest
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session
-from fastapi.testclient import TestClient
-
 from app.db.base import Base
 from app.db.seed import seed_database
-from app.db.session import get_db
-from app.main import app
 from app.models import AuditEvent, Bid, Evidence, Membership, Organization, Tender, User
-from app.models.enums import ApprovalState, BidStage, ComplianceStatus, Role, TenderLifecycle
+from app.models.enums import ApprovalState, Role, TenderLifecycle
 
 
 @pytest.fixture()

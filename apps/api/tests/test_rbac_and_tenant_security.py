@@ -1,13 +1,6 @@
-import uuid
-import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.orm import Session
 
-from app.db.base import Base
-from app.db.seed import seed_database
 from app.main import app
-from app.models.enums import Role
 
 client = TestClient(app)
 
@@ -113,3 +106,191 @@ def test_rbac_owner_admin_can_approve_any_step():
     )
     assert res_admin.status_code == 200
     assert res_admin.json()["status"] == "approved"
+
+
+def test_cross_tenant_isolation_on_bids_and_vault():
+    headers_org_b = {
+        "X-Org-Id": ORG_B_ID,
+        "X-User-Id": USER_B_EXEC_ID,
+    }
+    # Org B trying to access Org A's bids via query override must be blocked with 403
+    res_bids = client.get(f"/api/v1/bids?organization_id={ORG_A_ID}", headers=headers_org_b)
+    assert res_bids.status_code == 403
+    assert "Cross-tenant" in res_bids.json()["detail"]
+
+    # Org B trying to access Org A's vault via query override must be blocked with 403
+    res_vault = client.get(f"/api/v1/vault?organization_id={ORG_A_ID}", headers=headers_org_b)
+    assert res_vault.status_code == 403
+    assert "Cross-tenant" in res_vault.json()["detail"]
+
+    # Org B trying to access Org A's compliance matrix via query override must be blocked with 403
+    res_matrix = client.get(f"/api/v1/compliance/matrix/{VENTILATOR_BID_ID}?organization_id={ORG_A_ID}", headers=headers_org_b)
+    assert res_matrix.status_code == 403
+    assert "Cross-tenant" in res_matrix.json()["detail"]
+
+
+def test_unauthenticated_requests_return_401():
+    # Calling tenant-scoped endpoints with no headers or query org must return 401
+    assert client.get("/api/v1/organizations/me").status_code == 401
+    assert client.get("/api/v1/bids").status_code == 401
+    assert client.get("/api/v1/vault").status_code == 401
+    assert client.get("/api/v1/saved-searches").status_code == 401
+
+
+def test_invalid_tenant_membership_returns_403():
+    # Spoofing: sending Org A's header with User B's ID (who belongs to Org B)
+    spoofed_headers = {
+        "X-Org-Id": ORG_A_ID,
+        "X-User-Id": USER_B_EXEC_ID,
+    }
+    res = client.get("/api/v1/bids", headers=spoofed_headers)
+    assert res.status_code == 403
+    assert "not a member" in res.json()["detail"].lower()
+
+
+def test_cross_tenant_direct_resource_access_returns_403():
+    # Authenticated as Org B, attempting direct path access to Org A's resources
+    headers_org_b = {
+        "X-Org-Id": ORG_B_ID,
+        "X-User-Id": USER_B_EXEC_ID,
+    }
+
+    # 1. Direct bid access
+    res_bid = client.get(f"/api/v1/bids/{VENTILATOR_BID_ID}", headers=headers_org_b)
+    assert res_bid.status_code == 403
+    assert "Cross-tenant" in res_bid.json()["detail"]
+
+    # 2. Direct bid stage update
+    res_stage = client.put(f"/api/v1/bids/{VENTILATOR_BID_ID}/stage", headers=headers_org_b, json={"stage": "submitted"})
+    assert res_stage.status_code == 403
+    assert "Cross-tenant" in res_stage.json()["detail"]
+
+    # 3. Direct bid decision update
+    res_dec = client.put(
+        f"/api/v1/bids/{VENTILATOR_BID_ID}/decision",
+        headers=headers_org_b,
+        json={"decision": "no_bid", "decision_rationale": "Tampering"},
+    )
+    assert res_dec.status_code == 403
+    assert "Cross-tenant" in res_dec.json()["detail"]
+
+    # 4. Direct bid tasks listing
+    res_tasks = client.get(f"/api/v1/bids/{VENTILATOR_BID_ID}/tasks", headers=headers_org_b)
+    assert res_tasks.status_code == 403
+    assert "Cross-tenant" in res_tasks.json()["detail"]
+
+    # 5. Direct bid task creation
+    res_create_task = client.post(
+        f"/api/v1/bids/{VENTILATOR_BID_ID}/tasks",
+        headers=headers_org_b,
+        json={"title": "Illegal Task", "task_type": "bid_security"},
+    )
+    assert res_create_task.status_code == 403
+    assert "Cross-tenant" in res_create_task.json()["detail"]
+
+
+def test_rbac_viewer_restrictions():
+    # Viewer in Org A
+    headers_viewer = {
+        "X-Org-Id": ORG_A_ID,
+        "X-User-Id": "11111111-0000-0000-0000-000000000008",
+    }
+
+    # 1. Viewer can read bids
+    res_read = client.get("/api/v1/bids", headers=headers_viewer)
+    assert res_read.status_code == 200
+
+    # 2. Viewer cannot update bid stage
+    res_stage = client.put(
+        f"/api/v1/bids/{VENTILATOR_BID_ID}/stage",
+        headers=headers_viewer,
+        json={"stage": "submitted"},
+    )
+    assert res_stage.status_code == 403
+    assert "Permission denied" in res_stage.json()["detail"]
+
+    # 3. Viewer cannot record bid decision
+    res_dec = client.put(
+        f"/api/v1/bids/{VENTILATOR_BID_ID}/decision",
+        headers=headers_viewer,
+        json={"decision": "bid", "decision_rationale": "Viewer override"},
+    )
+    assert res_dec.status_code == 403
+    assert "Permission denied" in res_dec.json()["detail"]
+
+    # 4. Viewer cannot create tasks
+    res_task = client.post(
+        f"/api/v1/bids/{VENTILATOR_BID_ID}/tasks",
+        headers=headers_viewer,
+        json={"title": "Viewer Task", "task_type": "bid_security"},
+    )
+    assert res_task.status_code == 403
+    assert "Permission denied" in res_task.json()["detail"]
+
+    # 5. Viewer cannot upload vault documents
+    res_vault = client.post(
+        "/api/v1/vault",
+        headers=headers_viewer,
+        json={"title": "Fake Doc", "doc_type": "certification"},
+    )
+    assert res_vault.status_code == 403
+    assert "Permission denied" in res_vault.json()["detail"]
+
+    # 6. Viewer cannot finalize submission
+    res_submit = client.post(
+        f"/api/v1/approvals/{VENTILATOR_BID_ID}/submit",
+        headers=headers_viewer,
+        json={"target_portal": "EPADS", "signatory_name": "Sara"},
+    )
+    assert res_submit.status_code == 403
+    assert "Permission denied" in res_submit.json()["detail"]
+
+
+def test_rbac_technical_and_finance_separation_of_duties():
+    headers_tech = {
+        "X-Org-Id": ORG_A_ID,
+        "X-User-Id": "11111111-0000-0000-0000-000000000004",
+    }
+    headers_fin = {
+        "X-Org-Id": ORG_A_ID,
+        "X-User-Id": "11111111-0000-0000-0000-000000000005",
+    }
+    steps = client.get(f"/api/v1/approvals/{VENTILATOR_BID_ID}?organization_id={ORG_A_ID}").json()
+    step_tech = steps[0]["id"]  # technical
+    step_comm = steps[1]["id"]  # commercial
+    step_final = steps[3]["id"] # final
+
+    # 1. Tech user approves Technical step -> 200 OK
+    res_tech_ok = client.post(
+        f"/api/v1/approvals/{VENTILATOR_BID_ID}/steps/{step_tech}/action?organization_id={ORG_A_ID}",
+        headers=headers_tech,
+        json={"action": "approved", "notes": "Technical specs validated"},
+    )
+    assert res_tech_ok.status_code == 200
+
+    # 2. Tech user attempts Commercial step -> 403 Forbidden
+    res_tech_fail = client.post(
+        f"/api/v1/approvals/{VENTILATOR_BID_ID}/steps/{step_comm}/action?organization_id={ORG_A_ID}",
+        headers=headers_tech,
+        json={"action": "approved", "notes": "Unauthorized commercial sign-off"},
+    )
+    assert res_tech_fail.status_code == 403
+    assert "Permission denied" in res_tech_fail.json()["detail"]
+
+    # 3. Finance user approves Commercial step -> 200 OK
+    res_fin_ok = client.post(
+        f"/api/v1/approvals/{VENTILATOR_BID_ID}/steps/{step_comm}/action?organization_id={ORG_A_ID}",
+        headers=headers_fin,
+        json={"action": "approved", "notes": "Pricing margin and 2% bond approved"},
+    )
+    assert res_fin_ok.status_code == 200
+
+    # 4. Finance user attempts Final executive step -> 403 Forbidden
+    res_fin_fail = client.post(
+        f"/api/v1/approvals/{VENTILATOR_BID_ID}/steps/{step_final}/action?organization_id={ORG_A_ID}",
+        headers=headers_fin,
+        json={"action": "approved", "notes": "Unauthorized final executive sign-off"},
+    )
+    assert res_fin_fail.status_code == 403
+    assert "Permission denied" in res_fin_fail.json()["detail"]
+

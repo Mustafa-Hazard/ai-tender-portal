@@ -2,7 +2,7 @@ import uuid
 from datetime import date, datetime
 from pydantic import BaseModel, ConfigDict
 
-from app.models.enums import ApprovalState, ComplianceStatus, RequirementKind, RequirementOrigin
+from app.models.enums import ApprovalState, ComplianceStatus, RequirementKind
 
 
 class EvidenceCreate(BaseModel):

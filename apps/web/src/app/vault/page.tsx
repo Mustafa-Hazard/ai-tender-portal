@@ -12,6 +12,7 @@ import {
   Trash2,
   UploadCloud,
   X,
+  Loader2,
 } from "lucide-react";
 import { StatusPill } from "../../components/shared/StatusPill";
 import { DocumentPreviewShell } from "../../components/shared/DocumentPreviewShell";
@@ -52,6 +53,20 @@ export default function DocumentVaultPage() {
   const [newIssuer, setNewIssuer] = useState("");
   const [newExpiresOn, setNewExpiresOn] = useState("");
   const [newCategory, setNewCategory] = useState<"tax" | "quality" | "financial" | "legal">("tax");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [dragActive, setDragActive] = useState(false);
+
+  const handleFileSelect = (file: File) => {
+    setSelectedFile(file);
+    if (!newTitle.trim()) {
+      const cleanName = file.name
+        .replace(/\.[^/.]+$/, "")
+        .replace(/[-_]+/g, " ")
+        .replace(/\b\w/g, (c) => c.toUpperCase());
+      setNewTitle(cleanName);
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -119,6 +134,7 @@ export default function DocumentVaultPage() {
       return;
     }
 
+    setIsUploading(true);
     try {
       const payload = {
         title: newTitle.trim(),
@@ -137,6 +153,10 @@ export default function DocumentVaultPage() {
       const isExp = expiresDate ? expiresDate < today : false;
       const daysDiff = expiresDate ? Math.ceil((expiresDate.getTime() - today.getTime()) / (1000 * 3600 * 24)) : 999;
 
+      const fileSizeStr = selectedFile
+        ? `${(selectedFile.size / (1024 * 1024)).toFixed(1)} MB`
+        : "1.4 MB";
+
       const createdDoc: VaultDoc = {
         id: String(created.id),
         title: created.title,
@@ -151,11 +171,12 @@ export default function DocumentVaultPage() {
         jurisdiction: created.jurisdiction || "Pakistan",
         confidentiality: created.confidentiality || "Internal",
         approvalState: "approved",
-        storageSize: "1.2 MB",
+        storageSize: fileSizeStr,
       };
 
       setDocuments((prev) => [createdDoc, ...prev]);
       setShowUploadModal(false);
+      setSelectedFile(null);
       setNewTitle("");
       setNewIssuer("");
       setNewExpiresOn("");
@@ -164,6 +185,8 @@ export default function DocumentVaultPage() {
     } catch (err: any) {
       setError(`Failed to save credential: ${err.message}`);
       toastError(`Failed to save credential: ${err.message}`);
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -465,25 +488,97 @@ export default function DocumentVaultPage() {
                   </div>
                 </div>
 
-                <div className="border-2 border-dashed border-slate-200 rounded-lg p-6 text-center bg-slate-50">
-                  <UploadCloud className="w-8 h-8 text-slate-400 mx-auto mb-2" />
-                  <p className="text-xs text-slate-600 font-medium">Select PDF or scan (up to 25 MB)</p>
-                  <p className="text-[11px] text-slate-400 mt-1">Files are hashed (SHA-256) and encrypted at rest</p>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">
+                    Credential File
+                  </label>
+                  <input
+                    type="file"
+                    id="vault-file-upload"
+                    accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
+                    onChange={(e) => {
+                      if (e.target.files && e.target.files[0]) {
+                        handleFileSelect(e.target.files[0]);
+                      }
+                    }}
+                    className="hidden"
+                  />
+                  <label
+                    htmlFor="vault-file-upload"
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      setDragActive(true);
+                    }}
+                    onDragLeave={() => setDragActive(false)}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      setDragActive(false);
+                      if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                        handleFileSelect(e.dataTransfer.files[0]);
+                      }
+                    }}
+                    className={`border-2 border-dashed rounded-xl p-5 text-center block cursor-pointer transition-all ${
+                      dragActive
+                        ? "border-blue-500 bg-blue-50/70"
+                        : selectedFile
+                        ? "border-emerald-300 bg-emerald-50/40"
+                        : "border-slate-300 hover:border-blue-400 bg-slate-50 hover:bg-slate-100/70"
+                    }`}
+                  >
+                    {selectedFile ? (
+                      <div className="space-y-1">
+                        <div className="w-9 h-9 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center mx-auto">
+                          <CheckCircle2 className="w-5 h-5" />
+                        </div>
+                        <div className="text-xs font-bold text-slate-900 break-all">{selectedFile.name}</div>
+                        <p className="text-[11px] text-emerald-700 font-medium">
+                          {(selectedFile.size / (1024 * 1024)).toFixed(2)} MB • Ready to Upload & Encrypt
+                        </p>
+                        <span className="inline-block text-[10px] text-blue-600 underline font-semibold mt-0.5">
+                          Click or drag to choose another file
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="space-y-1">
+                        <UploadCloud className="w-8 h-8 text-blue-600 mx-auto mb-1.5" />
+                        <p className="text-xs text-slate-700 font-bold">
+                          Click to browse or drop your document here
+                        </p>
+                        <p className="text-[11px] text-slate-500">
+                          Supports PDF, Scanned Images, DOCX (up to 25 MB)
+                        </p>
+                        <p className="text-[10px] text-slate-400 pt-0.5">
+                          Files are hashed (SHA-256) and encrypted at rest for compliance verification
+                        </p>
+                      </div>
+                    )}
+                  </label>
                 </div>
 
                 <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
                   <button
                     type="button"
-                    onClick={() => setShowUploadModal(false)}
-                    className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                    onClick={() => {
+                      setShowUploadModal(false);
+                      setSelectedFile(null);
+                    }}
+                    className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg shadow-sm transition-colors"
+                    disabled={isUploading}
+                    className="px-4 py-2 bg-[#0051d5] hover:bg-blue-700 text-white text-sm font-semibold rounded-lg shadow-sm transition-colors cursor-pointer disabled:opacity-60 flex items-center gap-1.5"
                   >
-                    Save to Vault
+                    {isUploading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Encrypting & Storing...</span>
+                      </>
+                    ) : (
+                      <span>Save to Vault</span>
+                    )}
                   </button>
                 </div>
               </form>

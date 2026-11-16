@@ -235,7 +235,22 @@ export default function ApprovalsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filtered.map((item) => (
+                {filtered.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="py-12 text-center text-slate-400">
+                      <ShieldCheck className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                      <p className="text-xs font-semibold text-slate-700">No Sign-off Tasks in Approvals Queue</p>
+                      <p className="text-[11px] text-slate-400 mt-0.5">Tasks populate when proposals reach designated commercial or technical governance gates.</p>
+                      <Link
+                        href="/proposals"
+                        className="inline-block mt-3 px-3 py-1.5 bg-blue-50 text-[#0051d5] hover:bg-blue-100 rounded text-xs font-bold transition-colors"
+                      >
+                        View Proposals Workspace
+                      </Link>
+                    </td>
+                  </tr>
+                ) : (
+                  filtered.map((item) => (
                   <tr key={item.id} className="hover:bg-slate-50/70 transition-colors">
                     <td className="py-3.5 px-4 max-w-xs">
                       <div className="font-bold text-slate-900 leading-snug">{item.tenderTitle}</div>
@@ -283,7 +298,7 @@ export default function ApprovalsPage() {
                       )}
                     </td>
                   </tr>
-                ))}
+                )))}
               </tbody>
             </table>
           </div>

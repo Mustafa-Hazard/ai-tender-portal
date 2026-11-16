@@ -314,33 +314,42 @@ export default function TenderDetailPage({ params }: TenderDetailParams) {
 
           {/* Action Decision Buttons */}
           <div className="flex flex-wrap items-center gap-2 lg:flex-col lg:items-end shrink-0">
-            {bidDecisionStatus === "bidding" ? (
-              <span className="px-4 py-2 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-bold flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                Bid Active in Participation Pipeline
-              </span>
-            ) : bidDecisionStatus === "declined" ? (
-              <span className="px-4 py-2 rounded-lg bg-slate-100 text-slate-700 border border-slate-200 text-xs font-bold flex items-center gap-2">
-                <XCircle className="w-4 h-4 text-slate-500" />
-                Declined: {notBiddingReason}
-              </span>
-            ) : (
-              <>
-                <button
-                  onClick={handleParticipate}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg text-xs font-bold hover:bg-blue-700 shadow-xs flex items-center gap-1.5 transition-colors"
-                >
-                  <Layers className="w-4 h-4" />
-                  Participate / Create Bid
-                </button>
-                <button
-                  onClick={() => setShowNotBiddingModal(true)}
-                  className="px-3 py-1.5 bg-slate-100 text-slate-700 hover:bg-slate-200 rounded-lg text-xs font-semibold transition-colors"
-                >
-                  Flag as Not Bidding
-                </button>
-              </>
-            )}
+            <div className="flex items-center gap-2">
+              <Link
+                href={`/compliance?tender_id=${tender.id}`}
+                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold shadow-xs flex items-center gap-1.5 transition-colors"
+              >
+                <ShieldCheck className="w-4 h-4" />
+                Evaluate Compliance
+              </Link>
+              {bidDecisionStatus === "bidding" ? (
+                <span className="px-4 py-2 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-bold flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                  Bid Active in Pipeline
+                </span>
+              ) : bidDecisionStatus === "declined" ? (
+                <span className="px-4 py-2 rounded-lg bg-slate-100 text-slate-700 border border-slate-200 text-xs font-bold flex items-center gap-2">
+                  <XCircle className="w-4 h-4 text-slate-500" />
+                  Declined: {notBiddingReason}
+                </span>
+              ) : (
+                <>
+                  <button
+                    onClick={handleParticipate}
+                    className="px-4 py-2 bg-[#0051d5] text-white rounded-lg text-xs font-bold hover:bg-blue-700 shadow-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+                  >
+                    <Layers className="w-4 h-4" />
+                    Participate / Create Bid
+                  </button>
+                  <button
+                    onClick={() => setShowNotBiddingModal(true)}
+                    className="px-3 py-1.5 bg-slate-100 text-slate-700 hover:bg-slate-200 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+                  >
+                    Flag Not Bidding
+                  </button>
+                </>
+              )}
+            </div>
             <a
               href={tender.originalUrl}
               target="_blank"

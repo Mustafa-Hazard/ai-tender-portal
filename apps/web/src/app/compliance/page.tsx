@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
   ShieldCheck,
@@ -12,6 +13,8 @@ import {
   FileText,
   Building,
   AlertOctagon,
+  ArrowRight,
+  FolderLock,
 } from "lucide-react";
 import { StatusPill } from "../../components/shared/StatusPill";
 import { CitationLink } from "../../components/shared/CitationLink";
@@ -101,44 +104,7 @@ export default function ComplianceMatrixPage() {
   const [justificationInput, setJustificationInput] = useState("");
   const [justificationError, setJustificationError] = useState("");
 
-  // Rule 7 Scenario Simulator
-  const [isScenarioBActive, setIsScenarioBActive] = useState(false);
-
   const activeTender = TENDERS.find((t) => t.id === selectedTenderId) || TENDERS[0];
-
-  // Apply scenario B (expired evidence) or scenario A
-  const toggleScenario = (enableScenarioB: boolean) => {
-    setIsScenarioBActive(enableScenarioB);
-    if (enableScenarioB) {
-      setRequirements(
-        requirements.map((r) =>
-          r.code === "REQ-LEG-01"
-            ? {
-                ...r,
-                linkedEvidenceTitle: "PRA Provincial Tax Clearance Certificate (EXPIRED)",
-                linkedEvidenceExpiresOn: "2026-09-07",
-                isEvidenceExpired: true,
-                reviewerStatus: "meets_requirement",
-              }
-            : r
-        )
-      );
-    } else {
-      setRequirements((prev) =>
-        prev.map((r) =>
-          r.code === "REQ-LEG-01"
-            ? {
-                ...r,
-                linkedEvidenceTitle: "Active Taxpayer Status Certificate 2026-27",
-                linkedEvidenceExpiresOn: "2027-07-14",
-                isEvidenceExpired: false,
-                reviewerStatus: "meets_requirement",
-              }
-            : r
-        )
-      );
-    }
-  };
 
   // Compute 4 Distinct Indicators (Rule 4 & 5)
   const totalReqs = requirements.length;
@@ -253,25 +219,21 @@ export default function ComplianceMatrixPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="bg-slate-100 p-1 rounded-lg flex items-center text-xs font-medium">
-              <button
-                onClick={() => toggleScenario(false)}
-                className={`px-3 py-1.5 rounded-md transition-colors ${
-                  !isScenarioBActive ? "bg-white text-slate-900 shadow-sm font-semibold" : "text-slate-600 hover:text-slate-900"
-                }`}
-              >
-                Scenario A: Valid Vault
-              </button>
-              <button
-                onClick={() => toggleScenario(true)}
-                className={`px-3 py-1.5 rounded-md transition-colors ${
-                  isScenarioBActive ? "bg-red-600 text-white shadow-sm font-semibold" : "text-slate-600 hover:text-red-700"
-                }`}
-              >
-                Scenario B: Expired Doc (Rule 7)
-              </button>
-            </div>
+          <div className="flex items-center gap-2.5">
+            <Link
+              href="/vault"
+              className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5"
+            >
+              <FolderLock className="w-4 h-4 text-slate-500" />
+              <span>Evidence Vault</span>
+            </Link>
+            <Link
+              href="/proposals"
+              className="px-4 py-2 bg-[#0051d5] hover:bg-blue-700 text-white text-xs font-bold rounded-lg shadow-sm transition-colors flex items-center gap-1.5"
+            >
+              <span>Proposal Workspace</span>
+              <ArrowRight className="w-4 h-4" />
+            </Link>
           </div>
         </div>
 
@@ -506,6 +468,38 @@ export default function ComplianceMatrixPage() {
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+
+        {/* Master Workflow: Next Stage Progression Card */}
+        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded">
+              Next Stage in Master Workflow
+            </span>
+            <h3 className="text-sm font-bold text-slate-900 mt-1">
+              Ready to compile the Technical Proposal & Commercial Schedule?
+            </h3>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Verified compliance matrices and active vault credentials flow automatically into the proposal preparation workspace.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2.5 shrink-0">
+            <Link
+              href="/approvals"
+              className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5"
+            >
+              <UserCheck className="w-4 h-4 text-slate-500" />
+              <span>Approvals Queue</span>
+            </Link>
+            <Link
+              href="/proposals"
+              className="px-4 py-2 bg-[#0051d5] hover:bg-blue-700 text-white text-xs font-bold rounded-lg shadow-sm transition-colors flex items-center gap-1.5"
+            >
+              <span>Launch Proposal Workspace</span>
+              <ArrowRight className="w-4 h-4" />
+            </Link>
           </div>
         </div>
 

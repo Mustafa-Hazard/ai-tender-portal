@@ -519,6 +519,21 @@ export default function ProposalDetailPage() {
         {/* Tab: Multi-Role Approvals */}
         {activeTab === "approvals" && (
           <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-blue-50/70 border border-blue-200 rounded-xl text-xs">
+              <div className="flex items-center gap-2.5 text-blue-900">
+                <ShieldCheck className="w-5 h-5 text-[#0051d5] shrink-0" />
+                <div>
+                  <span className="font-bold block">Centralized Approvals Governance</span>
+                  <span className="text-slate-600 text-[11px]">Designated signatories can review line items, leave feedback, and sign off in the global Approvals Queue.</span>
+                </div>
+              </div>
+              <Link
+                href="/approvals"
+                className="px-3.5 py-1.5 bg-[#0051d5] hover:bg-blue-700 text-white font-bold rounded-lg shadow-2xs transition-colors shrink-0 text-center"
+              >
+                Open Approvals Queue
+              </Link>
+            </div>
             <ApprovalPanel
               steps={approvalSteps}
               canApprove={!isSubmitted}

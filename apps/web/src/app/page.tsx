@@ -12,7 +12,6 @@ import {
   Plus,
   ArrowRight,
   ShieldAlert,
-  Building,
   FolderLock,
   Layers,
 } from "lucide-react";
@@ -235,29 +234,36 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      {/* Top Banner: Scenario Context & Setup */}
-      <div className="flex flex-wrap items-center justify-between gap-4 p-5 rounded-lg bg-white border border-slate-200">
+      {/* Top Banner: Enterprise Workspace Header */}
+      <div className="flex flex-wrap items-center justify-between gap-4 p-5 rounded-xl bg-white border border-slate-200 shadow-2xs">
         <div>
           <div className="flex items-center gap-2.5">
             <h1 className="text-xl font-bold text-slate-900 tracking-tight">
-              Bid Management
+              Procurement Command Center
             </h1>
-            <span className="px-2 py-0.5 rounded text-[11px] font-mono font-medium bg-slate-100 text-slate-700 border border-slate-200">
-              Scenario {activeOrg.scenario}
+            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-200">
+              {currentRole.replace(/_/g, " ")}
             </span>
           </div>
           <p className="text-xs text-slate-500 mt-1">
-            Workspace: <strong className="text-slate-800 font-semibold">{activeOrg.name}</strong> • NTN: {activeOrg.ntn}
+            Active Workspace: <strong className="text-slate-800 font-semibold">{activeOrg.name}</strong> • Enterprise Bid Operations
           </p>
         </div>
 
         <div className="flex items-center gap-2">
           <Link
-            href="/onboarding"
+            href="/vault"
             className="px-3 py-1.5 rounded-md text-xs font-semibold bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 transition-colors flex items-center gap-1.5"
           >
-            <Building className="w-3.5 h-3.5 text-slate-500" />
-            <span>Profile ({activeOrg.profileCompleteness}%)</span>
+            <FolderLock className="w-3.5 h-3.5 text-slate-500" />
+            <span>Document Vault</span>
+          </Link>
+          <Link
+            href="/compliance"
+            className="px-3 py-1.5 rounded-md text-xs font-semibold bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 transition-colors flex items-center gap-1.5"
+          >
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+            <span>Compliance Matrix</span>
           </Link>
           <Link
             href="/tenders"
@@ -268,47 +274,6 @@ export default function DashboardPage() {
           </Link>
         </div>
       </div>
-
-      {/* Critical Alert Banners per Scenarios B and C */}
-      {activeOrg.scenario === "B" && (
-        <div className="p-4 rounded-lg bg-red-50 border border-red-200 flex items-start gap-3 text-red-950">
-          <ShieldAlert className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
-          <div className="flex-1 text-xs">
-            <h4 className="font-bold text-red-900 text-sm">
-              Disqualification Risk Detected (Scenario B — Trust Rule 7)
-            </h4>
-            <p className="mt-0.5 text-red-800 leading-relaxed">
-              Your company&apos;s <strong>PRA Provincial Tax Clearance Certificate</strong> expired 35 days ago. Under PPRA Rule 36, mandatory qualification is blocked regardless of high capability fit (88%). Upload a valid certificate to unlock eligibility.
-            </p>
-          </div>
-          <Link
-            href="/vault"
-            className="px-3 py-1 bg-red-600 text-white rounded font-bold text-xs hover:bg-red-700 whitespace-nowrap self-center"
-          >
-            Update Vault
-          </Link>
-        </div>
-      )}
-
-      {activeOrg.scenario === "C" && (
-        <div className="p-4 rounded-lg bg-purple-50 border border-purple-200 flex items-start gap-3 text-purple-950">
-          <AlertTriangle className="w-5 h-5 text-purple-700 shrink-0 mt-0.5" />
-          <div className="flex-1 text-xs">
-            <h4 className="font-bold text-purple-900 text-sm">
-              Tender Corrigendum Notice (Scenario C — Trust Rule 11)
-            </h4>
-            <p className="mt-0.5 text-purple-800 leading-relaxed">
-              NDMA issued <strong>Corrigendum 01</strong> extending the deadline and modifying delivery terms to 45 days. Affected proposal approvals have been invalidated and require review.
-            </p>
-          </div>
-          <Link
-            href="/compliance"
-            className="px-3 py-1 bg-purple-700 text-white rounded font-bold text-xs hover:bg-purple-800 whitespace-nowrap self-center"
-          >
-            Review Changes
-          </Link>
-        </div>
-      )}
 
       {/* KPI Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -330,14 +295,10 @@ export default function DashboardPage() {
             <ShieldCheck className="w-4 h-4 text-emerald-600" />
           </div>
           <div className="text-2xl font-black font-mono">
-            {activeOrg.scenario === "B" ? (
-              <span className="text-red-700">Blocked</span>
-            ) : (
-              <span className="text-emerald-700">100% Valid</span>
-            )}
+            <span className="text-emerald-700">100% Valid</span>
           </div>
           <div className="text-[11px] text-slate-500 mt-1">
-            {activeOrg.scenario === "B" ? "1 Expired Mandatory Certificate" : "3 Pinned Vault Evidence Verified"}
+            All Verified Vault Evidence Active
           </div>
         </div>
 

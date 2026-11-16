@@ -315,7 +315,26 @@ export default function ReportsAndAnalyticsPage() {
           </div>
 
           <div className="divide-y divide-slate-100">
-            {filteredOutcomes.map((item) => (
+            {filteredOutcomes.length === 0 ? (
+              <div className="p-12 text-center">
+                <BarChart3 className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+                <h3 className="text-sm font-bold text-slate-800">No Historical Outcomes Recorded Yet</h3>
+                <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1 leading-relaxed">
+                  Post-award records, competitor price variance, and win-loss debrief notes will appear here as tender outcomes are finalized.
+                </p>
+                <div className="mt-4">
+                  <button
+                    type="button"
+                    onClick={() => setShowDebriefModal(true)}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-blue-50 text-[#0051d5] hover:bg-blue-100 rounded-lg text-xs font-bold transition-colors cursor-pointer"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Record First Debrief
+                  </button>
+                </div>
+              </div>
+            ) : (
+              filteredOutcomes.map((item) => (
               <div key={item.id} className="p-6 hover:bg-slate-50/70 transition-colors">
                 <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
                   <div className="space-y-2 flex-1">
@@ -381,7 +400,7 @@ export default function ReportsAndAnalyticsPage() {
                   </div>
                 </div>
               </div>
-            ))}
+            )))}
           </div>
         </div>
 

@@ -66,7 +66,7 @@ interface AuditLogEntry {
 }
 
 export default function AdminPage() {
-  const { currentRole, isPlatformAdmin, setIsPlatformAdmin, uiState } = useTenant();
+  const { currentRole, isPlatformAdmin, uiState } = useTenant();
   const [activeTab, setActiveTab] = useState<"connectors" | "extraction" | "audit">("connectors");
   const [selectedReviewItem, setSelectedReviewItem] = useState<ReviewItem | null>(null);
   const [correctedValueInput, setCorrectedValueInput] = useState("");
@@ -337,36 +337,23 @@ export default function AdminPage() {
   // Handle permission denied UI state
   if (!isAuthorized || uiState === "permission_denied") {
     return (
-      <div className="max-w-4xl mx-auto py-16 px-4">
-        <div className="bg-white rounded-xl border border-red-200 p-8 shadow-sm text-center">
-          <div className="w-16 h-16 bg-red-50 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4 border border-red-100">
+      <div className="max-w-2xl mx-auto py-16 px-4">
+        <div className="bg-white rounded-xl border border-slate-200 p-8 shadow-sm text-center">
+          <div className="w-16 h-16 bg-amber-50 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-4 border border-amber-200">
             <Lock className="w-8 h-8" />
           </div>
-          <h1 className="text-2xl font-bold text-slate-900 mb-2">
+          <h1 className="text-xl font-bold text-slate-900 mb-2">
             Administrator Privileges Required
           </h1>
-          <p className="text-slate-600 text-sm max-w-md mx-auto mb-6">
-            The Platform Administration Console manages source crawlers, OCR review queues, and tenant-wide immutable audit ledgers. Your current role is{" "}
-            <span className="font-semibold text-slate-800">{currentRole}</span>.
+          <p className="text-slate-600 text-xs max-w-md mx-auto mb-6 leading-relaxed">
+            The Administration Console is restricted to authenticated <strong>Owner Administrators</strong> and <strong>Platform Engineers</strong>. Your current role is{" "}
+            <span className="font-semibold text-slate-900 capitalize">{currentRole.replace(/_/g, " ")}</span>. Please contact your organization owner for access.
           </p>
 
-          <div className="p-4 bg-slate-50 rounded-lg border border-slate-200 max-w-lg mx-auto text-left mb-6 text-xs text-slate-600 space-y-2">
-            <p className="font-semibold text-slate-800">Demo RBAC Simulator:</p>
-            <p>
-              To explore this page, you can either switch your role to <strong>Owner Admin</strong> in the top header, or toggle the demo Platform Admin simulation below:
-            </p>
-          </div>
-
           <div className="flex items-center justify-center gap-3">
-            <button
-              onClick={() => setIsPlatformAdmin(true)}
-              className="px-5 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm"
-            >
-              Simulate Platform Admin Session
-            </button>
             <Link
               href="/"
-              className="px-5 py-2.5 bg-slate-100 text-slate-700 rounded-lg text-sm font-semibold hover:bg-slate-200 transition-colors"
+              className="px-5 py-2.5 bg-[#0051d5] text-white rounded-lg text-xs font-semibold hover:bg-blue-700 transition-colors shadow-sm"
             >
               Return to Dashboard
             </Link>
@@ -803,9 +790,9 @@ export default function AdminPage() {
                 className="text-xs border border-slate-300 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-700 bg-white"
               >
                 <option value="all">All Organizations</option>
-                <option value="apex">Apex Healthcare (Scenario A)</option>
-                <option value="delta">Delta Engineering (Scenario B)</option>
-                <option value="indus">Indus Logistics (Scenario C)</option>
+                <option value="apex">Apex Healthcare Technologies</option>
+                <option value="delta">Delta Engineering Works</option>
+                <option value="indus">Indus Logistics Pvt Ltd</option>
                 <option value="platform">Platform Administration</option>
               </select>
             </div>
